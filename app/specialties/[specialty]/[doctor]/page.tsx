@@ -414,7 +414,7 @@ export default function SchedulePage() {
                 <div className="consultation-days-section flex-1" style={{
                   background: 'linear-gradient(135deg, #F8E8ED 0%, #F4D4E1 100%)',
                   borderRadius: '24px',
-                  padding: '32px',
+                  padding: '16px',
                   border: '1px solid rgba(127, 12, 67, 0.1)',
                   boxShadow: '0 8px 32px rgba(127, 12, 67, 0.08)'
                 }}>
@@ -439,13 +439,7 @@ export default function SchedulePage() {
                     </div>
                   </div>
                   
-                  <div className={`grid gap-3 ${
-                    consultaDays.length === 1 
-                      ? 'grid-cols-1 justify-items-center' 
-                      : consultaDays.length <= 3 
-                        ? 'grid-cols-3 justify-items-center' 
-                        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 justify-items-center'
-                  }`}>
+                  <div className="flex flex-wrap gap-3 justify-center items-center">
                     {consultaDays.map((day) => {
                       const isSelected = isDaySelected(day, 'consulta')
                       return (
@@ -508,13 +502,7 @@ export default function SchedulePage() {
                     </div>
                   </div>
                   
-                  <div className={`grid gap-3 ${
-                    procedimientoDays.length === 1 
-                      ? 'grid-cols-1 justify-items-center' 
-                      : procedimientoDays.length <= 3 
-                        ? 'grid-cols-3 justify-items-center' 
-                        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 justify-items-center'
-                  }`}>
+                  <div className="flex flex-wrap gap-3 justify-center items-center">
                     {procedimientoDays.map((day) => {
                       const isSelected = isDaySelected(day, 'procedimiento')
                       return (

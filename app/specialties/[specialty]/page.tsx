@@ -200,7 +200,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
   return (
     <DirectorioLayout>
       <div style={{ paddingTop: '200px' }}>
-        <h1 className="text-4xl font-bold text-primary mb-10 text-center">Doctores en {specialtyName}</h1>
+        <h1 className="text-4xl font-bold text-primary mb-10 text-center">DOCTORES EN  {specialtyName}</h1>
         
         {/* Mostrar todos los doctores sin filtro */}
         <div className="w-full flex justify-center">
