@@ -36,7 +36,7 @@ export function DirectorioLayout({ children, showBackButton = true }: Directorio
   const isHomePage = pathname === "/"
 
   return (
-    <div className="relative flex flex-col min-h-screen bg-background text-accent2">
+    <div className="relative flex flex-col min-h-screen bg-transparent text-accent2">
       {/* Header según la página */}
       {isHomePage ? (
         // Header original para la página de inicio
@@ -131,7 +131,7 @@ export function DirectorioLayout({ children, showBackButton = true }: Directorio
         </div>
       </div>
 
-      <main className="flex-1 flex flex-col items-center w-full max-w-6xl mx-auto px-4 md:px-8 lg:px-12 py-8">
+      <main className="flex-1 flex flex-col items-center w-full max-w-6xl mx-auto px-4 md:px-8 lg:px-12 py-8 bg-transparent">
         {children}
       </main>
 

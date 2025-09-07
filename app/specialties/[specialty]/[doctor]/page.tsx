@@ -279,7 +279,7 @@ export default function SchedulePage() {
   if (loading) {
     return (
       <DirectorioLayout>
-        <div className="container mx-auto px-4 py-8" style={{ backgroundColor: '#F9F4F6' }}>
+        <div className="container mx-auto px-4 py-8" >
           <div className="flex flex-col items-center justify-center min-h-[300px] gap-6">
             <div className="flex items-center space-x-4 w-full max-w-3xl">
               <Skeleton className="h-24 w-24 rounded-full bg-[#E5E5E5]" />
@@ -307,7 +307,7 @@ export default function SchedulePage() {
   if (error) {
     return (
       <DirectorioLayout>
-        <div className="container mx-auto px-4 py-8" style={{ backgroundColor: '#F9F4F6' }}>
+        <div className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto bg-[#F9F4F6] border border-[#7F0C43] rounded-lg p-6 text-center">
             <AlertCircleIcon className="mx-auto h-12 w-12 text-[#7F0C43] mb-4" />
             <h2 className="text-2xl font-bold text-[#7F0C43] mb-2" style={{ fontFamily: "'Century Gothic', sans-serif" }}>Error al cargar los datos</h2>
@@ -342,33 +342,35 @@ export default function SchedulePage() {
 
   return (
     <DirectorioLayout>
-      <div className="container mx-auto px-4 py-8" style={{ backgroundColor: '#F9F4F6' }}>
+      <div className="container mx-auto px-4 py-8">
         {/* Doctor Profile Section */}
-        <div className="flex flex-col md:flex-row items-center gap-6 mb-10 rounded-xl shadow-sm p-6 border border-[#E5E5E5]">
-          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-[#F9F4F6] overflow-hidden flex items-center justify-center">
-            {doctorInfo.photo && !photoError ? (
-              <img
-                src={doctorInfo.photo}
-                alt={`Foto del Dr. ${doctorInfo.name}`}
-                className="w-full h-full object-cover"
-                onError={() => setPhotoError(true)}
-              />
-            ) : (
-              <UserRoundMedical className="w-16 h-16 md:w-20 md:h-20 text-[#7F0C43]" />
-            )}
-          </div>
-
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl font-bold text-[#333333] mb-1" style={{ fontFamily: "'Century Gothic', sans-serif" }}>Dr. {doctorInfo.name}</h1>
-            <p className="text-lg text-[#7F0C43] font-medium mb-3" style={{ fontFamily: "'Century Gothic', sans-serif" }}>{doctorInfo.specialty}</p>
-
-            <div className="flex flex-wrap justify-center md:justify-start gap-2">
-              {availableDays.length > 0 && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#F9F4F6] text-[#7F0C43] text-sm font-medium border border-[#C84D80]" style={{ fontFamily: "Arial, sans-serif" }}>
-                  <CalendarCheckIcon className="h-4 w-4 mr-1" />
-                  {availableDays.length} día{availableDays.length !== 1 ? 's' : ''} disponible{availableDays.length !== 1 ? 's' : ''}
-                </span>
+        <div className="sticky top-32 z-30 w-full bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b rounded-xl shadow-sm p-6 border border-[#E5E5E5] mb-10">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-[#F9F4F6] overflow-hidden flex items-center justify-center">
+              {doctorInfo.photo && !photoError ? (
+                <img
+                  src={doctorInfo.photo}
+                  alt={`Foto del Dr. ${doctorInfo.name}`}
+                  className="w-full h-full object-cover"
+                  onError={() => setPhotoError(true)}
+                />
+              ) : (
+                <UserRoundMedical className="w-16 h-16 md:w-20 md:h-20 text-[#7F0C43]" />
               )}
+            </div>
+
+            <div className="text-center md:text-left">
+              <h1 className="text-3xl font-bold text-[#333333] mb-1" style={{ fontFamily: "'Century Gothic', sans-serif" }}>Dr. {doctorInfo.name}</h1>
+              <p className="text-lg text-[#7F0C43] font-medium mb-3" style={{ fontFamily: "'Century Gothic', sans-serif" }}>{doctorInfo.specialty}</p>
+
+              <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                {availableDays.length > 0 && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#F9F4F6] text-[#7F0C43] text-sm font-medium border border-[#C84D80]" style={{ fontFamily: "Arial, sans-serif" }}>
+                    <CalendarCheckIcon className="h-4 w-4 mr-1" />
+                    {availableDays.length} día{availableDays.length !== 1 ? 's' : ''} disponible{availableDays.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
