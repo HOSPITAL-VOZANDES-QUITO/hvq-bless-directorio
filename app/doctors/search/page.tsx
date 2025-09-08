@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import "@/styles/pages.css"
 import { DirectorioLayout } from "@/components/directorio-layout"
@@ -32,11 +32,12 @@ export default function DoctorSearchPage() {
   const [page, setPage] = useState(0)
 
   useEffect(() => {
+    const controller = new AbortController()
     let cancelled = false
     const load = async () => {
       try {
         setLoading(true)
-        const res = await apiService.getDoctores()
+        const res = await apiService.getDoctores({ signal: controller.signal })
         const list = Array.isArray(res.data)
           ? res.data
           : Array.isArray((res.data as any)?.data)
@@ -55,6 +56,7 @@ export default function DoctorSearchPage() {
     load()
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [])
 
@@ -219,7 +221,19 @@ export default function DoctorSearchPage() {
 
                 {/* Controles de paginación: solo visibles en modo sin búsqueda y si hay más de una página */}
                 {!searchTerm.trim() && totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-6 mt-8 mb-4">
+                  <div className="flex items-center justify-center gap-4 mt-8 mb-4">
+                    {/* Botón Ir al inicio */}
+                    <button
+                      type="button"
+                      className="px-6 py-3 bg-gradient-to-r from-[#5A0A2F] to-[#6B0F35] hover:from-[#6B0F35] hover:to-[#5A0A2F] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[100px] text-sm"
+                      onClick={() => setPage(0)}
+                      disabled={page === 0}
+                      aria-label="Ir al inicio"
+                    >
+                      ⏮ Inicio
+                    </button>
+                    
+                    {/* Botón Página anterior */}
                     <button
                       type="button"
                       className="px-8 py-4 bg-gradient-to-r from-[#7F0C43] to-[#8C1843] hover:from-[#8C1843] hover:to-[#7F0C43] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[120px] text-lg"
@@ -229,11 +243,15 @@ export default function DoctorSearchPage() {
                     >
                       ← Anterior
                     </button>
+                    
+                    {/* Indicador de página actual */}
                     <div className="px-6 py-3 bg-gradient-to-r from-[#F9F4F6] to-[#E5E5E5] rounded-xl shadow-md border border-[#E5E5E5]">
                       <span className="text-lg font-semibold text-[#7F0C43]">
                         Página {page + 1} de {totalPages}
                       </span>
                     </div>
+                    
+                    {/* Botón Página siguiente */}
                     <button
                       type="button"
                       className="px-8 py-4 bg-gradient-to-r from-[#7F0C43] to-[#8C1843] hover:from-[#8C1843] hover:to-[#7F0C43] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[120px] text-lg"
@@ -242,6 +260,17 @@ export default function DoctorSearchPage() {
                       aria-label="Página siguiente"
                     >
                       Siguiente →
+                    </button>
+                    
+                    {/* Botón Ir al final */}
+                    <button
+                      type="button"
+                      className="px-6 py-3 bg-gradient-to-r from-[#5A0A2F] to-[#6B0F35] hover:from-[#6B0F35] hover:to-[#5A0A2F] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[100px] text-sm"
+                      onClick={() => setPage(totalPages - 1)}
+                      disabled={page >= totalPages - 1}
+                      aria-label="Ir al final"
+                    >
+                      Final ⏭
                     </button>
                   </div>
                 )}

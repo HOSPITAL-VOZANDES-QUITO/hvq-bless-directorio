@@ -47,8 +47,20 @@ class ApiService {
         }
       }
 
+      // Combinar señal externa (si existe) con timeout local
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT)
+      const externalSignal = options.signal
+      const onExternalAbort = () => {
+        try { controller.abort((externalSignal as any)?.reason) } catch {}
+      }
+      if (externalSignal) {
+        if (externalSignal.aborted) {
+          onExternalAbort()
+        } else {
+          externalSignal.addEventListener('abort', onExternalAbort)
+        }
+      }
+      const timeoutId = setTimeout(() => controller.abort(new DOMException('timeout','AbortError')), API_CONFIG.TIMEOUT)
 
       const response = await fetch(url, {
         ...config,
@@ -56,6 +68,7 @@ class ApiService {
       })
 
       clearTimeout(timeoutId)
+      if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort)
 
       if (!response.ok) {
         // No lanzar excepción: devolver un objeto de error controlado
@@ -113,8 +126,8 @@ class ApiService {
   }
 
   // ===== ENDPOINTS DE MÉDICOS =====
-  async getDoctores(): Promise<ApiResponse<Doctor[]>> {
-    return this.request<Doctor[]>('/api/medicos')
+  async getDoctores(options?: { signal?: AbortSignal }): Promise<ApiResponse<Doctor[]>> {
+    return this.request<Doctor[]>('/api/medicos', { signal: options?.signal })
   }
 
   async getEspecialidadesAgenda(): Promise<ApiResponse<string[]>> {
