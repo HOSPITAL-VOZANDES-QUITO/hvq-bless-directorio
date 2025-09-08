@@ -8,7 +8,7 @@ import { VirtualKeyboard } from "@/components/virtual-keyboard"
 import { SearchIcon } from "lucide-react"
 import { DoctorCard } from "@/components/doctor-card"
 import { Spinner } from "@/components/ui/spinner"
-import { apiService } from "@/lib/api-service"
+import { useDoctorsCache } from "@/hooks/use-doctors-cache"
 
 type DoctorItem = {
   id: string
@@ -24,41 +24,11 @@ const PAGE_SIZE = 12
 export default function DoctorSearchPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
-  const [doctors, setDoctors] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Nuevo: página actual para modo sin búsqueda
   const [page, setPage] = useState(0)
+  const [isPaginationDisabled, setIsPaginationDisabled] = useState(false)
 
-  useEffect(() => {
-    const controller = new AbortController()
-    let cancelled = false
-    const load = async () => {
-      try {
-        setLoading(true)
-        const res = await apiService.getDoctores({ signal: controller.signal })
-        const list = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray((res.data as any)?.data)
-          ? (res.data as any).data
-          : []
-        if (!cancelled) {
-          setDoctors(list as any[])
-          setError(null)
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Error cargando médicos")
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-      controller.abort()
-    }
-  }, [])
+  // Usar el hook de caché para obtener los datos de médicos
+  const { doctors, loading, error } = useDoctorsCache()
 
   // Normalizador y lista base normalizada una sola vez por cambio de doctors
   const normalizedDoctors: DoctorItem[] = useMemo(() => {
@@ -145,6 +115,25 @@ export default function DoctorSearchPage() {
     setIsKeyboardOpen(false)
   }
 
+  // Función para manejar navegación con timeout
+  const handlePageNavigation = (newPage: number) => {
+    if (isPaginationDisabled) return
+    
+    setIsPaginationDisabled(true)
+    setPage(newPage)
+    
+    // Rehabilitar botones después de 2 segundos
+    setTimeout(() => {
+      setIsPaginationDisabled(false)
+    }, 2000)
+  }
+
+  // Funciones específicas para cada botón
+  const goToFirstPage = () => handlePageNavigation(0)
+  const goToPreviousPage = () => handlePageNavigation(Math.max(0, page - 1))
+  const goToNextPage = () => handlePageNavigation(Math.min(totalPages - 1, page + 1))
+  const goToLastPage = () => handlePageNavigation(totalPages - 1)
+
   const getSpecialtySlug = (nameOrId: string) => {
     const v = String(nameOrId || "")
     if (/^\d+$/.test(v)) return v
@@ -226,8 +215,8 @@ export default function DoctorSearchPage() {
                     <button
                       type="button"
                       className="px-6 py-3 bg-gradient-to-r from-[#5A0A2F] to-[#6B0F35] hover:from-[#6B0F35] hover:to-[#5A0A2F] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[100px] text-sm"
-                      onClick={() => setPage(0)}
-                      disabled={page === 0}
+                      onClick={goToFirstPage}
+                      disabled={page === 0 || isPaginationDisabled}
                       aria-label="Ir al inicio"
                     >
                       ⏮ Inicio
@@ -237,8 +226,8 @@ export default function DoctorSearchPage() {
                     <button
                       type="button"
                       className="px-8 py-4 bg-gradient-to-r from-[#7F0C43] to-[#8C1843] hover:from-[#8C1843] hover:to-[#7F0C43] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[120px] text-lg"
-                      onClick={() => setPage(p => Math.max(0, p - 1))}
-                      disabled={page === 0}
+                      onClick={goToPreviousPage}
+                      disabled={page === 0 || isPaginationDisabled}
                       aria-label="Página anterior"
                     >
                       ← Anterior
@@ -255,8 +244,8 @@ export default function DoctorSearchPage() {
                     <button
                       type="button"
                       className="px-8 py-4 bg-gradient-to-r from-[#7F0C43] to-[#8C1843] hover:from-[#8C1843] hover:to-[#7F0C43] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[120px] text-lg"
-                      onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                      disabled={page >= totalPages - 1}
+                      onClick={goToNextPage}
+                      disabled={page >= totalPages - 1 || isPaginationDisabled}
                       aria-label="Página siguiente"
                     >
                       Siguiente →
@@ -266,8 +255,8 @@ export default function DoctorSearchPage() {
                     <button
                       type="button"
                       className="px-6 py-3 bg-gradient-to-r from-[#5A0A2F] to-[#6B0F35] hover:from-[#6B0F35] hover:to-[#5A0A2F] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg min-w-[100px] text-sm"
-                      onClick={() => setPage(totalPages - 1)}
-                      disabled={page >= totalPages - 1}
+                      onClick={goToLastPage}
+                      disabled={page >= totalPages - 1 || isPaginationDisabled}
                       aria-label="Ir al final"
                     >
                       Final ⏭

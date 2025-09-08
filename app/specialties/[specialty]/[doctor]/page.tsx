@@ -414,13 +414,13 @@ export default function SchedulePage() {
             {/* Días de Consulta */}
             {consultaDays.length > 0 && (
                 <div className="consultation-days-section flex-1" style={{
-                  background: 'linear-gradient(135deg, #F8E8ED 0%, #F4D4E1 100%)',
-                  borderRadius: '24px',
+                  background: 'transparent',
+                  borderRadius: '25px',
                   padding: '16px',
                   border: '1px solid rgba(127, 12, 67, 0.1)',
                   boxShadow: '0 8px 32px rgba(127, 12, 67, 0.08)'
                 }}>
-                  <div className="consultation-days-header" style={{ marginBottom: '24px' }}>
+                  <div className="consultation-days-header" style={{ marginBottom: '24px', background: 'transparent' }}>
                     <div className="flex items-center justify-center gap-3" style={{ marginBottom: '8px' }}>
                       <div style={{
                         backgroundColor: '#7F0C43',
@@ -477,13 +477,13 @@ export default function SchedulePage() {
             {/* Días de Procedimiento */}
             {procedimientoDays.length > 0 && (
                 <div className="procedure-days-section flex-1" style={{
-                  background: 'linear-gradient(135deg, #F8E8ED 0%, #F4D4E1 100%)',
-                  borderRadius: '24px',
-                  padding: '32px',
+                  background: 'transparent',
+                  borderRadius: '25px',
+                  padding: '16px',
                   border: '1px solid rgba(127, 12, 67, 0.1)',
                   boxShadow: '0 8px 32px rgba(127, 12, 67, 0.08)'
                 }}>
-                  <div className="procedure-days-header" style={{ marginBottom: '24px' }}>
+                  <div className="procedure-days-header" style={{ marginBottom: '24px', background: 'transparent' }}>
                     <div className="flex items-center justify-center gap-3" style={{ marginBottom: '8px' }}>
                       <div style={{
                         backgroundColor: '#7F0C43',
