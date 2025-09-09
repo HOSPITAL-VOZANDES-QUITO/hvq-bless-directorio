@@ -624,6 +624,13 @@ export default function SchedulePage() {
                     </CardHeader>
                     <CardContent className="doctor-schedule-details-content">
                       <div className="space-y-2">
+                          {source !== 'specialty' && sched.specialtyLabel && (
+                          <div className="flex items-center gap-2">
+                            <ClipboardListIcon className="doctor-schedule-details-icon h-5 w-5 text-[#7F0C43]" />
+                            <span className="doctor-schedule-details-label font-medium">Especialidad:</span>
+                            <span className="text-2xl">{sched.specialtyLabel}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <CalendarCheckIcon className="doctor-schedule-details-icon h-5 w-5 text-[#7F0C43]" />
                           <span className="doctor-schedule-details-label font-medium">Horario:</span>
@@ -647,13 +654,7 @@ export default function SchedulePage() {
                           <span className="doctor-schedule-details-label font-medium">Ubicación:</span>
                           <span className="text-2xl">{sched.floor || 'No especificado'}</span>
                         </div>
-                        {source !== 'specialty' && sched.specialtyLabel && (
-                          <div className="flex items-center gap-2">
-                            <ClipboardListIcon className="doctor-schedule-details-icon h-5 w-5 text-[#7F0C43]" />
-                            <span className="doctor-schedule-details-label font-medium">Especialidad:</span>
-                            <span className="text-2xl">{sched.specialtyLabel}</span>
-                          </div>
-                        )}
+      
                       </div>
                     </CardContent>
                   </Card>
