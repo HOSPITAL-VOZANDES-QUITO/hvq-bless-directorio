@@ -8,6 +8,7 @@ import { use } from "react"
 import axios from "axios"
 import { getAccessToken } from "@/lib/auth"
 import { Spinner } from "@/components/ui/spinner"
+import { config } from "@/lib/config"
 
 // Normaliza textos a slug: minúsculas, sin acentos, sólo [a-z0-9-]
 const slugify = (input: string): string => {
@@ -58,7 +59,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
         const isId = /^\d+$/.test(String(specialtyId))
         let resolvedIdForFilter = String(specialtyId)
         if (isId) {
-          const specialtyResponse = await axios.get(`http://10.129.180.166:36560/api3/v1/especialidades/${specialtyId}`, {
+          const specialtyResponse = await axios.get(`${config.auth.baseUrl}/especialidades/${specialtyId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Accept': 'application/json'
@@ -69,7 +70,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
           resolvedIdForFilter = String(specialtyResponse.data.especialidadId ?? specialtyId)
           setResolvedSpecialtyId(resolvedIdForFilter)
         } else {
-          const res = await axios.get('http://10.129.180.166:36560/api3/v1/especialidades/agenda', {
+          const res = await axios.get(`${config.auth.baseUrl}/especialidades/agenda`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Accept': 'application/json'
@@ -84,7 +85,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
         }
 
         // 2. Obtener todos los médicos con sus detalles
-        const allDoctorsResponse = await axios.get('http://10.129.180.166:36560/api3/v1/medico/agenda2', {
+        const allDoctorsResponse = await axios.get(`${config.auth.baseUrl}/medico/agenda2`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
@@ -105,7 +106,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
           const results = await Promise.allSettled(
             allDoctorsResponse.data.map(async (doctorId: number) => {
               try {
-                const doctorResponse = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/agenda2/${doctorId}`, {
+                const doctorResponse = await axios.get(`${config.auth.baseUrl}/medico/agenda2/${doctorId}`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'

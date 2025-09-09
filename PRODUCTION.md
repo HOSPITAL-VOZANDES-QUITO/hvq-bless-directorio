@@ -7,23 +7,31 @@
 #### Credenciales y Variables de Entorno
 ```bash
 # ❌ NUNCA hacer esto en producción
-NEXT_PUBLIC_AUTH_USERNAME=middleware_dev
-NEXT_PUBLIC_AUTH_PASSWORD=DevMH@2025!
+EXTERNAL_AUTH_USERNAME=middleware_dev
+EXTERNAL_AUTH_PASSWORD=DevMH@2025!
+DB_USER=hvq_usrpython
+DB_PASSWORD=pyth0n2022
 
 # ✅ Hacer esto en producción
-NEXT_PUBLIC_AUTH_USERNAME=usuario_produccion_seguro
-NEXT_PUBLIC_AUTH_PASSWORD=password_complejo_y_seguro_2025!
+EXTERNAL_AUTH_USERNAME=usuario_produccion_seguro
+EXTERNAL_AUTH_PASSWORD=password_complejo_y_seguro_2025!
+DB_USER=usuario_db_produccion
+DB_PASSWORD=password_db_seguro_2025!
 ```
 
 #### URLs de Producción
 ```bash
 # ❌ URLs de desarrollo
 NEXT_PUBLIC_API_URL=http://10.129.180.151:3001
-NEXT_PUBLIC_AUTH_URL=http://10.129.180.161:36560/api3/v1
+EXTERNAL_AUTH_URL=http://10.129.180.161:36560/api3/v1/Auth/login
+EXTERNAL_API_BASE_URL=http://10.129.180.161:36560/api3/v1
+DB_CONNECT_STRING=172.16.241.62:1521/SML
 
 # ✅ URLs de producción (con HTTPS)
 NEXT_PUBLIC_API_URL=https://api.hospital-vozandes.com
-NEXT_PUBLIC_AUTH_URL=https://auth.hospital-vozandes.com/api3/v1
+EXTERNAL_AUTH_URL=https://auth.hospital-vozandes.com/api3/v1/Auth/login
+EXTERNAL_API_BASE_URL=https://auth.hospital-vozandes.com/api3/v1
+DB_CONNECT_STRING=servidor-prod:1521/PROD
 ```
 
 ### 2. **Configuración de Servidor**
@@ -36,9 +44,26 @@ sudo nano /var/www/directorio-medico/.env.production
 # Contenido del archivo:
 NODE_ENV=production
 NEXT_PUBLIC_API_URL=https://api.hospital-vozandes.com
-NEXT_PUBLIC_AUTH_URL=https://auth.hospital-vozandes.com/api3/v1
-NEXT_PUBLIC_AUTH_USERNAME=usuario_produccion
-NEXT_PUBLIC_AUTH_PASSWORD=password_seguro_produccion
+EXTERNAL_AUTH_URL=https://auth.hospital-vozandes.com/api3/v1/Auth/login
+EXTERNAL_API_BASE_URL=https://auth.hospital-vozandes.com/api3/v1
+EXTERNAL_AUTH_USERNAME=usuario_produccion
+EXTERNAL_AUTH_PASSWORD=password_seguro_produccion
+DB_MODE=thin
+DB_USER=usuario_db_produccion
+DB_PASSWORD=password_db_seguro_2025!
+DB_CONNECT_STRING=servidor-prod:1521/PROD
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+DB_POOL_INCREMENT=1
+DB_POOL_TIMEOUT=300
+DB_SYNCHRONIZE=false
+DB_LOGGING=false
+EDITOR_CUSTOM_SCHEMA=EDITOR_CUSTOM
+CACHE_SPECIALTIES_TIMEOUT=60000
+CACHE_API_TIMEOUT=30000
+APP_TITLE=hvq-dir
+APP_DESCRIPTION=Directorio Edificio Bless
+APP_IDLE_TIMEOUT=30000
 NEXT_PUBLIC_LOGO_URL=https://cdn.hospital-vozandes.com/img_directorio/logo.svg
 NEXT_PUBLIC_APLICATIVO_LOGO_URL=https://cdn.hospital-vozandes.com/img_directorio/aplicativo_logo.svg
 NEXT_PUBLIC_HOMELINE_URL=https://cdn.hospital-vozandes.com/img_directorio/homeline.png

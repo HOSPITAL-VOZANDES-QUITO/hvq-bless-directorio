@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useRouter, useParams } from "next/navigation"
 import { apiService } from "@/lib/api-service"
+import { config } from "@/lib/config"
 import { extractHHmm, formatHHmmTo12h } from "@/lib/utils"
 
 // Normaliza textos a slug: minúsculas, sin acentos, sólo [a-z0-9-]
@@ -102,12 +103,12 @@ export default function SchedulePage() {
         const isSpecialtyId = /^\d+$/.test(specialtySlug)
         let foundSpecialty: any
         if (isSpecialtyId) {
-          const res = await axios.get(`http://10.129.180.166:36560/api3/v1/especialidades/${specialtySlug}`, {
+          const res = await axios.get(`${config.auth.baseUrl}/especialidades/${specialtySlug}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           foundSpecialty = res.data
         } else {
-          const res = await axios.get('http://10.129.180.166:36560/api3/v1/especialidades/agenda', {
+          const res = await axios.get(`${config.auth.baseUrl}/especialidades/agenda`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           const list = Array.isArray(res.data) ? res.data : []
@@ -121,19 +122,19 @@ export default function SchedulePage() {
         let doctorData: any
         let doctorIdToUse: number
         if (isDoctorId) {
-          const res = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/agenda/${doctorSlug}`, {
+          const res = await axios.get(`${config.auth.baseUrl}/medico/agenda/${doctorSlug}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           doctorData = res.data
           doctorIdToUse = doctorData.id
         } else {
-          const res = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/especialidad/${foundSpecialty.especialidadId}`, {
+          const res = await axios.get(`${config.auth.baseUrl}/medico/especialidad/${foundSpecialty.especialidadId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           const list = Array.isArray(res.data) ? res.data : []
           const foundDoctor = list.find((doc: any) => slugify(String(doc.nombres || '')) === slugify(String(doctorSlug)))
           if (!foundDoctor) throw new Error('Médico no encontrado')
-          const detail = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/agenda/${foundDoctor.id}`, {
+          const detail = await axios.get(`${config.auth.baseUrl}/medico/agenda/${foundDoctor.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           doctorData = detail.data

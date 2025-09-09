@@ -51,7 +51,7 @@ export default function HomePage() {
             {/* Botón principal - lleva a la pantalla de selección */}
             <Link href="/selection" passHref>
               <Button className="bg-primary text-primary-foreground hover:bg-accent1 text-5xl px-20 py-14 rounded-full shadow-2xl transition-all duration-300 ease-in-out transform hover:scale-105 inline-flex items-center gap-5 border-2 border-white/30">
-                ¡Comenzar!
+                ¡Aquí!
                 <ArrowRight className="w-18 h-12" style={{width: '3.5rem', height: 'auto' }} />
               </Button>
             </Link>
