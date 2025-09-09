@@ -9,7 +9,7 @@ Sistema de directorio médico para el Hospital Vozandes Quito, desarrollado con 
 - **Búsqueda de especialidades y médicos** con teclado virtual
 - **Gestión de agendas médicas** en tiempo real
 - **Caché inteligente** para mejorar el rendimiento
-- **Manejo robusto de errores** centralizado
+- **Validación y normalización de datos** centralizada
 - **Tipado completo** con TypeScript
 
 ## 🛠️ Tecnologías
@@ -40,8 +40,9 @@ Sistema de directorio médico para el Hospital Vozandes Quito, desarrollado con 
 │   ├── auth.ts           # Servicio de autenticación
 │   ├── api-service.ts    # Servicio de API
 │   ├── utils.ts          # Utilidades generales
-│   ├── error-handler.ts  # Manejo de errores
-│   └── cache.ts          # Sistema de caché
+│   ├── constants.ts      # Constantes del proyecto
+│   ├── data-normalization.ts # Normalización de datos
+│   └── data-validation.ts    # Validación de datos
 ├── styles/               # Archivos CSS
 └── public/               # Archivos estáticos
 ```

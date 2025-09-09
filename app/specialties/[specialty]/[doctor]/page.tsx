@@ -4,7 +4,7 @@ import { DirectorioLayout } from "@/components/directorio-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import "@/styles/pages.css"
 import { notFound } from "next/navigation"
-import { DoorOpenIcon, BuildingIcon, CalendarCheckIcon, ClockIcon, MapPinIcon, AlertCircleIcon, UserRoundIcon as UserRoundMedical, ClipboardListIcon, ScissorsIcon } from 'lucide-react'
+import { DoorOpenIcon, BuildingIcon, CalendarCheckIcon, MapPinIcon, AlertCircleIcon, UserRoundIcon as UserRoundMedical, ClipboardListIcon, ScissorsIcon } from 'lucide-react'
 import { VideoAgendas } from "@/components/video-agendas"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"

@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPinIcon, LocateFixedIcon, Volume2, VolumeX } from 'lucide-react'
+import { Volume2, VolumeX } from 'lucide-react'
 import { useInteractiveVideo } from "@/hooks/use-interactive-video"
 
 /**
