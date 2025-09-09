@@ -1,4 +1,7 @@
 import Image from "next/image"
+import { APPVERSION } from "@/lib/config"
+
+const version = APPVERSION
 
 export function Footer() {
   return (
@@ -9,7 +12,7 @@ export function Footer() {
                  flex justify-between items-center 
                  z-20"
     >
-      <div className="text-left">v1.0.0</div>
+      <div className="text-left">v{version}</div>
       <div className="flex items-center gap-1 text-right">
         TICS | HOSPITAL VOZANDES QUITO
         <Image

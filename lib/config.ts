@@ -1,4 +1,7 @@
+//importar package json para obtener la version
+import packageJson from '../package.json'
 // Configuración centralizada del proyecto
+export const APPVERSION = packageJson.version
 export const config = {
   // URLs de la API
   api: {
@@ -11,7 +14,7 @@ export const config = {
   images: {
     logo: process.env.NEXT_PUBLIC_LOGO_URL || 'http://horizon-html:35480/public/img_directorio/logo.svg',
     aplicativoLogo: process.env.NEXT_PUBLIC_APLICATIVO_LOGO_URL || 'http://horizon-html:35480/public/img_directorio/aplicativo_logo.svg',
-    homeline: process.env.NEXT_PUBLIC_HOMELINE_URL || 'http://prd-hvq-desarrollos:8001/media/thumb-launch-bless.png',
+    homeline: process.env.NEXT_PUBLIC_HOMELINE_URL || 'http://prd-hvq-desarrollos:8001/media/inicio_dir.jpg',
     banner: process.env.NEXT_PUBLIC_BANNER_URL || 'http://horizon-html:35480/public/img_directorio/banner.png',
     hvqLogo: process.env.NEXT_PUBLIC_HVQ_LOGO_URL || '/images/hvq_2025_1.png',
   },
