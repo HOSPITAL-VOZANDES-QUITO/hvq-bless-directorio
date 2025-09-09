@@ -5,21 +5,37 @@ import { memo, useEffect, useRef, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import "@/styles/doctores.css"
 
+/**
+ * Props del componente DoctorCard
+ * Define las propiedades necesarias para renderizar una tarjeta de médico
+ */
 interface DoctorCardProps {
+  /** Datos del médico a mostrar */
   doctor: {
+    /** ID único del médico */
     id: string
+    /** Nombre completo del médico */
     name: string
+    /** URL de la foto del médico (opcional) */
     photo?: string | null
+    /** Lista de especialidades del médico */
     especialidades?: Array<{id: string, label: string}>
   }
+  /** Nombre de la especialidad (puede ser múltiple) */
   specialtyName: string | string[]
+  /** Ruta base para los enlaces */
   basePath: string
+  /** Clases CSS adicionales */
   className?: string
+  /** Variante de visualización: por defecto o compacta */
   variant?: 'default' | 'compact'
+  /** Parámetros de consulta para los enlaces */
   queryParams?: Record<string, string>
 }
 
+// Componente para mostrar la tarjeta de un médico con optimización de imágenes
 export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, basePath, className, variant = 'default', queryParams }: DoctorCardProps) {
+  // Estados para manejar la carga y errores de imagen
   const [hasImageError, setHasImageError] = useState(false)
   const [isImageLoading, setIsImageLoading] = useState(Boolean(doctor.photo))
   const [showIconFallback, setShowIconFallback] = useState(false)
@@ -27,7 +43,7 @@ export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, base
   const [imgSrc, setImgSrc] = useState<string | null>(null)
   const cardRef = useRef<HTMLDivElement | null>(null)
 
-  // IntersectionObserver: solo activar carga de imagen cuando el card esté visible
+  // IntersectionObserver: solo cargar imagen cuando el card esté visible en pantalla
   useEffect(() => {
     if (!cardRef.current) return
     const element = cardRef.current
@@ -46,14 +62,14 @@ export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, base
     }
   }, [])
 
-  // Una vez visible, asignar src para iniciar la carga
+  // Una vez que el card es visible, iniciar la carga de la imagen
   useEffect(() => {
     if (isInView && doctor.photo && !hasImageError) {
       setImgSrc(doctor.photo)
     }
   }, [isInView, doctor.photo, hasImageError])
 
-  // Timeout de 2s: si no carga, mostrar icono pero seguir precargando en background
+  // Timeout de 2 segundos: si la imagen no carga, mostrar icono pero seguir precargando en background
   useEffect(() => {
     if (!imgSrc) return
     if (!isImageLoading) return
@@ -65,7 +81,7 @@ export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, base
     return () => clearTimeout(id)
   }, [imgSrc, isImageLoading])
 
-  // Resetear estados si cambia el doctor o su foto
+  // Resetear todos los estados cuando cambia el doctor o su foto
   useEffect(() => {
     setHasImageError(false)
     setIsImageLoading(Boolean(doctor.photo))
@@ -74,18 +90,19 @@ export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, base
     else setImgSrc(null)
   }, [doctor.id, doctor.photo, isInView])
 
+  // Determinar si mostrar icono en lugar de imagen
   const showIcon = !doctor.photo || hasImageError || showIconFallback
   const isCompact = variant === 'compact'
   
-  // Verificar si el nombre excede los 28 caracteres
+  // Verificar si el texto es muy largo para ajustar el tamaño de fuente
   const isLongName = doctor.name.length > 28
   const isLongSpecialty = specialtyName.length > 28
   
-  // Tamaños base
+  // Tamaños base de fuente según la variante
   const baseNameClass = isCompact ? 'text-lg' : 'text-2xl'
   const baseSpecClass = isCompact ? 'text-sm' : 'text-lg'
 
-  // Reducir tipografía cuando también se muestra la especialidad (variant default)
+  // Ajustar tipografía según la longitud del texto y variante
   const nameSize = !isCompact
     ? (isLongName ? 'text-lg' : 'text-xl')
     : (isLongName ? 'text-base' : 'text-lg')

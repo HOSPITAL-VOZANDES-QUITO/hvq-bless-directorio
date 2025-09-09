@@ -4,19 +4,22 @@ import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge" 
 import type { CurrentTimeProps } from "@/lib/types"
 
+// Componente para mostrar la hora y fecha actual en tiempo real
 export function CurrentTime({ variant = 'full' }: CurrentTimeProps) {
+  // Estados para almacenar los diferentes formatos de tiempo y fecha
   const [nowText, setNowText] = useState("")
   const [dateText, setDateText] = useState("")
   const [compactTime, setCompactTime] = useState("")
   const [compactDate, setCompactDate] = useState("")
   const [mounted, setMounted] = useState(false)
 
+  // Efecto para actualizar la hora y fecha cada segundo
   useEffect(() => {
     setMounted(true)
     const update = () => {
       const d = new Date()
       
-      // Formato de hora (más grande)
+      // Formatear hora en formato 12 horas con segundos
       const h24 = d.getHours()
       const mm = d.getMinutes().toString().padStart(2, '0')
       const ss = d.getSeconds().toString().padStart(2, '0')
@@ -24,7 +27,7 @@ export function CurrentTime({ variant = 'full' }: CurrentTimeProps) {
       const ampm = h24 >= 12 ? 'PM' : 'AM'
       setNowText(`${h12}:${mm}:${ss} ${ampm}`)
       
-      // Formato de fecha en español
+      // Formatear fecha completa en español
       const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
       const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
       
@@ -35,7 +38,7 @@ export function CurrentTime({ variant = 'full' }: CurrentTimeProps) {
       
       setDateText(`${diaSemana} ${dia} de ${mes} ${año}`)
       
-      // Formato compacto para el nuevo header
+      // Formatear versión compacta para header
       const diasCortos = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
       const mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
       
@@ -43,7 +46,6 @@ export function CurrentTime({ variant = 'full' }: CurrentTimeProps) {
       const mesCorto = mesesCortos[d.getMonth()]
       
       setCompactTime(`${h12}:${mm} ${ampm}`)
-      // En compacto, sólo la fecha debajo (sin hora)
       setCompactDate(`${diaSemanaCorto} ${dia} ${mesCorto} ${año}`)
     }
     update()
@@ -51,6 +53,7 @@ export function CurrentTime({ variant = 'full' }: CurrentTimeProps) {
     return () => clearInterval(timer)
   }, [])
 
+  // Renderizar versión compacta para header
   if (variant === 'compact') {
     return (
       <div className="flex items-center justify-center gap-2">
@@ -62,6 +65,7 @@ export function CurrentTime({ variant = 'full' }: CurrentTimeProps) {
     )
   }
 
+  // Renderizar versión completa con badge
   return (
     <div className="flex flex-col items-center gap-2">
       <Badge suppressHydrationWarning className="bg-accent1 text-primary-foreground text-4xl md:text-5xl px-6 md:px-8 pt-6 md:pt-8 pb-4 md:pb-5 rounded-full shadow-md font-bold">

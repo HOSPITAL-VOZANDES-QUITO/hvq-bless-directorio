@@ -5,11 +5,12 @@ import "@/styles/pages.css"
 import { DirectorioLayout } from "@/components/directorio-layout"
 import { StethoscopeIcon, UserSearchIcon, FileTextIcon } from 'lucide-react'
 
+// Página de selección de método de búsqueda
 export default function SelectionPage() {
   return (
     <DirectorioLayout>
       <div style={{ paddingTop: '20px' }}>
-        {/* Contenedor principal con fondo marrón oscuro */}
+        {/* Contenedor principal */}
         <div className="selection-main-container" style={{ 
           borderTopLeftRadius: '2rem', 
           borderTopRightRadius: '2rem',
@@ -18,12 +19,13 @@ export default function SelectionPage() {
           flexDirection: 'column',
           justifyContent: 'justify content'
         }}>
-          {/* Contenedor de botones */}
+          {/* Contenedor de opciones de búsqueda */}
           <div className="buttons-container" style={{ padding: '40px'}}>
             <h1 className="selection-title" style={{ padding: '20px', marginBottom: '70px', fontSize: '3rem' }}>¿Cómo deseas buscar?</h1>
             
-            {/* Botones de selección en disposición horizontal */}
+            {/* Botones de selección */}
             <div className="flex flex-row justify-center gap-10" style={{ paddingBottom: '2rem' }}>
+              {/* Opción 1: Buscar por especialidad médica */}
               <Link href="/specialties" passHref>
                 <Card className="selection-card" style={{ height: '28rem', width: '25rem' }}>
                   <CardContent className="selection-card-content" style={{ height: '100%', padding: '3rem 2rem' }}>
@@ -33,6 +35,7 @@ export default function SelectionPage() {
                 </Card>
               </Link>
               
+              {/* Opción 2: Buscar por nombre de médico */}
               <Link href="/doctors/search" passHref>
                 <Card className="selection-card" style={{ height: '28rem', width: '25rem' }}>
                   <CardContent className="selection-card-content" style={{ height: '100%', padding: '3rem 2rem' }}>
@@ -44,7 +47,7 @@ export default function SelectionPage() {
             </div>
           </div>
 
-          {/* Contenedor del video */}
+          {/* Contenedor del QR animado */}
           <div className="video-container" style={{ padding: '20px', marginTop: '40px' }}>
             <video
               autoPlay
@@ -64,10 +67,6 @@ export default function SelectionPage() {
             </video>
           </div>
         </div>
-
-
-
-
       </div>
     </DirectorioLayout>
   )

@@ -7,25 +7,30 @@ import Keyboard from "react-simple-keyboard"
 import type { KeyboardLayoutObject } from "react-simple-keyboard"
 import type { VirtualKeyboardProps } from "@/lib/types"
 
+// Componente de teclado virtual arrastrable para dispositivos táctiles
 export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter }: VirtualKeyboardProps) {
+  // Referencias para el teclado y su instancia
   const keyboardRef = useRef<HTMLDivElement>(null)
   const keyboardInstanceRef = useRef<any>(null)
+  
+  // Estados para manejar la posición y arrastre del teclado
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
+  // Efecto para inicializar el teclado y posicionarlo
   useEffect(() => {
     // Añadir clase para mostrar con animación
     const timer = setTimeout(() => {
       if (keyboardRef.current) {
         keyboardRef.current.classList.add('show')
-        // Posicionar más arriba para búsqueda - optimizado para no tapar el input de búsqueda
+        // Posicionar el teclado según el contexto de la página
         const rect = keyboardRef.current.getBoundingClientRect()
         
         // Detectar si estamos en la página de búsqueda de doctores
         const isSearchPage = window.location.pathname.includes('/doctors/search')
         
-        // Ajustar la posición según el contexto
+        // Ajustar la posición según el contexto para no tapar elementos importantes
         let positionMultiplier = 0.45 // Posición por defecto más arriba
         if (isSearchPage) {
           positionMultiplier = 0.35 // Aún más arriba para búsqueda
@@ -41,12 +46,14 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
     return () => clearTimeout(timer)
   }, [])
 
+  // Efecto para sincronizar el valor del teclado con el input
   useEffect(() => {
     if (keyboardInstanceRef.current) {
       keyboardInstanceRef.current.setInput(value || "")
     }
   }, [value])
 
+  // Función para manejar teclas especiales como Enter
   const handleKeyPress = (button: string) => {
     if (button === "{enter}") {
       if (onEnter) onEnter()
@@ -54,7 +61,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
     }
   }
 
-  // Dragging handlers (mouse)
+  // Manejadores de arrastre para mouse
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
       if (!isDragging) return
@@ -75,7 +82,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
     }
   }, [isDragging])
 
-  // Dragging handlers (touch)
+  // Manejadores de arrastre para dispositivos táctiles
   useEffect(() => {
     const handleMove = (e: TouchEvent) => {
       if (!isDragging) return
@@ -97,12 +104,15 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
     }
   }, [isDragging])
 
+  // Función para iniciar arrastre con mouse
   const startDragMouse = (e: React.MouseEvent) => {
     if (!keyboardRef.current) return
     const rect = keyboardRef.current.getBoundingClientRect()
     dragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
     setIsDragging(true)
   }
+  
+  // Función para iniciar arrastre con touch
   const startDragTouch = (e: React.TouchEvent) => {
     if (!keyboardRef.current) return
     const t = e.touches[0]
@@ -111,7 +121,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
     setIsDragging(true)
   }
 
-  // Layout del teclado y etiquetas de teclas - solo mayúsculas
+  // Configuración del layout del teclado en español
   const layout: KeyboardLayoutObject = {
     default: [
       "Q W E R T Y U I O P",
@@ -121,6 +131,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
     ]
   }
 
+  // Etiquetas personalizadas para las teclas especiales
   const display = {
     "{bksp}": "⌫",
     "{enter}": "Enter",
@@ -128,6 +139,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
     "{space}": "Espacio"
   }
 
+  // Función para cerrar el teclado con animación
   const handleClose = () => {
     if (keyboardRef.current) {
       keyboardRef.current.classList.remove('show')

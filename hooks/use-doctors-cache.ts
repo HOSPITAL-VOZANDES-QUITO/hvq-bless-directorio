@@ -1,35 +1,46 @@
 import { useState, useEffect, useCallback } from 'react'
 import { apiService } from '@/lib/api-service'
 
+/**
+ * Interfaz para los datos del caché de médicos
+ * Define la estructura de los datos almacenados en localStorage
+ */
 interface DoctorCacheData {
+  /** Lista de médicos almacenados */
   doctors: any[]
+  /** Timestamp de cuando se creó el caché */
   timestamp: number
+  /** ID único de la sesión actual */
   sessionId: string
 }
 
+// Configuración del caché
 const CACHE_KEY = 'hvq_doctors_cache'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 horas en milisegundos
 
-// Generar un ID único para la sesión actual
+// Función para generar un ID único para la sesión actual
 const generateSessionId = () => {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
+// Hook personalizado para manejar el caché de médicos con localStorage
 export function useDoctorsCache() {
+  // Estados para manejar los datos, carga y errores
   const [doctors, setDoctors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFromCache, setIsFromCache] = useState(false)
 
-  // Función para limpiar el caché cuando se cierra la página
+  // Función para limpiar el caché del localStorage
   const clearCache = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(CACHE_KEY)
     }
   }, [])
 
-  // Función para cargar datos desde caché o API
+  // Función principal para cargar datos desde caché o API
   const loadDoctors = useCallback(async (signal?: AbortSignal) => {
+    // Verificar si estamos en el cliente
     if (typeof window === 'undefined') {
       setLoading(false)
       return
@@ -48,7 +59,7 @@ export function useDoctorsCache() {
           const parsedCache: DoctorCacheData = JSON.parse(cachedData)
           const now = Date.now()
           
-          // Verificar si el caché es válido (no expirado y de la misma sesión)
+          // Verificar si el caché es válido (no expirado)
           if (parsedCache.timestamp && (now - parsedCache.timestamp) < CACHE_DURATION) {
             setDoctors(parsedCache.doctors)
             setIsFromCache(true)
@@ -73,7 +84,7 @@ export function useDoctorsCache() {
         setDoctors(list)
         setIsFromCache(false)
         
-        // Guardar en caché
+        // Guardar los nuevos datos en caché
         const cacheData: DoctorCacheData = {
           doctors: list,
           timestamp: Date.now(),
@@ -97,7 +108,7 @@ export function useDoctorsCache() {
     }
   }, [])
 
-  // Función para forzar recarga desde API (ignorar caché)
+  // Función para forzar recarga desde API ignorando el caché
   const refreshDoctors = useCallback(async (signal?: AbortSignal) => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(CACHE_KEY)
@@ -105,7 +116,7 @@ export function useDoctorsCache() {
     await loadDoctors(signal)
   }, [loadDoctors])
 
-  // Efecto para cargar datos al montar el componente
+  // Efecto para cargar datos al montar el componente y limpiar caché al desmontar
   useEffect(() => {
     const controller = new AbortController()
     loadDoctors(controller.signal)
@@ -119,7 +130,7 @@ export function useDoctorsCache() {
       clearCache()
     }
 
-    // Limpiar caché cuando se cierra la pestaña/ventana
+    // Agregar listeners para limpiar caché al cerrar la pestaña/ventana
     window.addEventListener('beforeunload', handleBeforeUnload)
     window.addEventListener('pagehide', handlePageHide)
 

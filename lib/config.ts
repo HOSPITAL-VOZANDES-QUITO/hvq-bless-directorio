@@ -1,16 +1,20 @@
-//importar package json para obtener la version
+// Importar package.json para obtener la versión de la aplicación
 import packageJson from '../package.json'
-// Configuración centralizada del proyecto
+
+// Versión de la aplicación extraída del package.json
 export const APPVERSION = packageJson.version
+
+// Configuración centralizada del proyecto
+// Todas las configuraciones se obtienen desde variables de entorno con valores por defecto
 export const config = {
-  // URLs de la API
+  // Configuración de URLs de la API
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://10.129.180.147:3001',
     authUrl: process.env.NEXT_PUBLIC_AUTH_URL || 'http://10.129.180.166:36560/api3/v1',
-    timeout: 30000, // 30 segundos
+    timeout: 30000, // 30 segundos de timeout para peticiones
   },
   
-  // URLs de imágenes
+  // URLs de imágenes utilizadas en la aplicación
   images: {
     logo: process.env.NEXT_PUBLIC_LOGO_URL || 'http://horizon-html:35480/public/img_directorio/logo.svg',
     aplicativoLogo: process.env.NEXT_PUBLIC_APLICATIVO_LOGO_URL || 'http://horizon-html:35480/public/img_directorio/aplicativo_logo.svg',
@@ -19,26 +23,29 @@ export const config = {
     hvqLogo: process.env.NEXT_PUBLIC_HVQ_LOGO_URL || '/images/hvq_2025_1.png',
   },
   
-  // Configuración de caché
+  // Configuración de caché para optimizar rendimiento
   cache: {
-    specialties: 60000, // 60 segundos
-    api: 30000, // 30 segundos
+    specialties: 60000, // 60 segundos de caché para especialidades
+    api: 30000, // 30 segundos de caché para peticiones API
   },
   
-  // Configuración de la aplicación
+  // Configuración general de la aplicación
   app: {
     title: 'hvq-dir',
     description: 'Directorio Edificio Bless',
-    idleTimeout: 30000, // 30 segundos
+    idleTimeout: 30000, // 30 segundos de timeout de inactividad
     version: APPVERSION,
   },
   
-  // Headers por defecto
+  // Headers por defecto para peticiones HTTP
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
 } as const
 
-// Tipos para la configuración
+/**
+ * Tipo para la configuración de la aplicación
+ * Se deriva automáticamente del objeto config para mantener consistencia
+ */
 export type Config = typeof config

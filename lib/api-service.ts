@@ -1,4 +1,4 @@
-// API Service for Hospital Vozandes Quito Medical Scheduling System
+// Servicio de API para el sistema de agendamiento médico del Hospital Vozandes Quito
 import { config } from './config'
 import type { 
   Doctor, 
@@ -16,6 +16,7 @@ const API_CONFIG = {
   DEFAULT_HEADERS: config.headers
 }
 
+// Clase principal para manejar todas las comunicaciones con la API
 class ApiService {
   private baseURL: string
   private inMemoryCache: Map<string, { ts: number; data: any }>
@@ -25,7 +26,8 @@ class ApiService {
     this.inMemoryCache = new Map()
   }
 
-  // Método helper para hacer requests al backend real
+  // Método principal para realizar peticiones HTTP al backend
+  // Maneja caché, timeouts, cancelación y errores de forma centralizada
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`
     const config: RequestInit = {
@@ -37,7 +39,7 @@ class ApiService {
     }
 
     try {
-      // Cache GET simples por 30s
+      // Verificar caché para peticiones GET (válido por 30 segundos)
       const isGet = !config.method || config.method.toUpperCase() === 'GET'
       const cacheKey = `${config.method || 'GET'}:${url}`
       if (isGet) {
@@ -47,7 +49,7 @@ class ApiService {
         }
       }
 
-      // Combinar señal externa (si existe) con timeout local
+      // Configurar cancelación de petición con timeout y señal externa
       const controller = new AbortController()
       const externalSignal = options.signal
       const onExternalAbort = () => {
@@ -62,16 +64,18 @@ class ApiService {
       }
       const timeoutId = setTimeout(() => controller.abort(new DOMException('timeout','AbortError')), API_CONFIG.TIMEOUT)
 
+      // Realizar la petición HTTP
       const response = await fetch(url, {
         ...config,
         signal: controller.signal
       })
 
+      // Limpiar timeout y listeners
       clearTimeout(timeoutId)
       if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort)
 
+      // Manejar errores HTTP
       if (!response.ok) {
-        // No lanzar excepción: devolver un objeto de error controlado
         const errorData = await response
           .json()
           .catch(async () => ({ message: await response.text().catch(() => '') }))
@@ -84,7 +88,7 @@ class ApiService {
         }
       }
 
-      // Intentar parsear JSON; si falla, devolver texto como data
+      // Procesar respuesta exitosa
       let data: unknown
       try {
         data = await response.json()
@@ -92,12 +96,14 @@ class ApiService {
         data = await response.text().catch(() => null)
       }
       
+      // Guardar en caché si es petición GET
       const ok: ApiResponse<T> = { data: data as T, success: true }
       if (isGet) {
         this.inMemoryCache.set(cacheKey, { ts: Date.now(), data })
       }
       return ok
     } catch (error) {
+      // Manejar errores de timeout
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,6 +113,7 @@ class ApiService {
         }
       }
 
+      // Manejar otros errores
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data: null as any as T,
@@ -117,48 +124,62 @@ class ApiService {
   }
 
   // ===== ENDPOINTS DE INFORMACIÓN =====
+  
+  // Obtiene información general de la API
   async getApiInfo(): Promise<ApiResponse<unknown>> {
     return this.request<unknown>('/')
   }
 
+  // Verifica el estado de salud del servicio
   async getHealth(): Promise<ApiResponse<unknown>> {
     return this.request<unknown>('/health')
   }
 
   // ===== ENDPOINTS DE MÉDICOS =====
+  
+  // Obtiene la lista completa de médicos
   async getDoctores(options?: { signal?: AbortSignal }): Promise<ApiResponse<Doctor[]>> {
     return this.request<Doctor[]>('/api/medicos', { signal: options?.signal })
   }
 
+  // Obtiene la lista de especialidades disponibles para agendamiento
   async getEspecialidadesAgenda(): Promise<ApiResponse<string[]>> {
     return this.request<string[]>('/api/medicos/especialidades')
   }
 
+  // Obtiene médicos filtrados por especialidad específica
   async getDoctoresPorEspecialidad(especialidadId: string | number): Promise<ApiResponse<Doctor[]>> {
     return this.request<Doctor[]>(`/api/medicos/especialidad/${encodeURIComponent(especialidadId)}`)
   }
 
+  // Obtiene un médico específico por su ID
   async getDoctorById(id: string | number): Promise<ApiResponse<Doctor>> {
     return this.request<Doctor>(`/api/medicos/item/${encodeURIComponent(id)}`)
   }
 
+  // Busca médicos por nombre
   async getDoctorByName(nombre: string): Promise<ApiResponse<Doctor[]>> {
     return this.request<Doctor[]>(`/api/medicos/nombre/${encodeURIComponent(nombre)}`)
   }
 
+  // Obtiene estadísticas de médicos
   async getDoctorStats(): Promise<ApiResponse<unknown>> {
     return this.request<unknown>('/api/medicos/estadisticas')
   }
 
   // ===== ENDPOINTS DE AGENDAS =====
+  
+  // Obtiene todas las agendas disponibles
   async getAgendas(): Promise<ApiResponse<Agenda[]>> {
     return this.request<Agenda[]>('/api/agnd-agenda')
   }
 
+  // Obtiene una agenda específica por ID
   async getAgendaById(id: number): Promise<ApiResponse<Agenda>> {
     return this.request<Agenda>(`/api/agnd-agenda/${id}`)
   }
 
+  // Obtiene agendas de un médico específico usando diferentes parámetros para compatibilidad
   async getAgendasPorMedico(codigoPrestador: string): Promise<ApiResponse<Agenda[]>> {
     // Intentar con ambos nombres de parámetro para máxima compatibilidad
     const first = await this.request<Agenda[]>(`/api/agnd-agenda?codigo_prestador=${encodeURIComponent(codigoPrestador)}`)
@@ -177,23 +198,29 @@ class ApiService {
     return first.success ? first : second
   }
 
+  // Obtiene estadísticas de agendas
   async getAgendaStats(): Promise<ApiResponse<unknown>> {
     return this.request<unknown>('/api/agnd-agenda/estadisticas')
   }
 
   // ===== ENDPOINTS DE CATÁLOGOS =====
+  
+  // Obtiene el catálogo de consultorios
   async getConsultorios(): Promise<ApiResponse<unknown[]>> {
     return this.request<unknown[]>('/api/catalogos/consultorios')
   }
 
+  // Obtiene el catálogo de días de la semana
   async getDias(): Promise<ApiResponse<unknown[]>> {
     return this.request<unknown[]>('/api/catalogos/dias')
   }
 
+  // Obtiene el catálogo de edificios
   async getEdificios(): Promise<ApiResponse<Edificio[]>> {
     return this.request<Edificio[]>('/api/catalogos/edificios')
   }
 
+  // Obtiene los pisos de un edificio específico
   async getPisosEdificio(codigoEdificio: string): Promise<ApiResponse<string[]>> {
     return this.request<string[]>(`/api/catalogos/edificios/${encodeURIComponent(codigoEdificio)}/pisos`)
   }
@@ -204,11 +231,14 @@ class ApiService {
   }
 
   // ===== ORQUESTACIÓN: AGENDAS DETALLADAS POR MÉDICO =====
+  
+  // Método principal que combina múltiples fuentes de datos para crear agendas detalladas
+  // Carga en paralelo agendas, médicos, consultorios, edificios y días
   async getAgendasDetalladasPorMedico(
     codigoPrestador: string | number,
     especialidadId?: string | number | (string | number)[]
   ): Promise<ApiResponse<AgendaDetallada[]>> {
-    // Cargar en paralelo
+    // Cargar todos los datos necesarios en paralelo para optimizar rendimiento
     const inputCodigo = String(codigoPrestador)
     const [agendasRes, medicosRes, consultoriosRes, edificiosRes, diasRes] = await Promise.all([
       this.getAgendasPorMedico(inputCodigo),
@@ -252,18 +282,20 @@ class ApiService {
       ? (diasRes.data as Record<string, unknown>[])
       : (Array.isArray((diasRes.data as any)?.data) ? ((diasRes.data as any).data as Record<string, unknown>[]) : [])
 
-    // Normalizar consultorios desde API (acepta CD_CONSULTORIO/CD_EDIFICIO/CD_PISO/DES_CONSULTORIO)
+    // Función para normalizar datos de consultorios desde diferentes formatos de API
     const normalizarConsultorio = (c: Record<string, unknown>): ConsultorioNormalizado => {
-      
+      // Extraer código del consultorio desde múltiples campos posibles
       const codigo = String(
         (c as any).codigo ?? (c as any).id ?? (c as any).codigo_consultorio ?? (c as any).CD_CONSULTORIO ?? (c as any).consultorio_id ?? ''
       )
+      // Extraer código del edificio desde múltiples campos posibles
       const edificio = String(
         (c as any).codigo_edificio ?? (c as any).edificio ?? (c as any).CD_EDIFICIO ?? (c as any).codigoEdificio ?? (c as any).edificio_id ?? (c as any).edificioId ?? ''
       )
+      // Extraer información del piso
       const piso = (c as any).piso ?? (c as any).CD_PISO ?? (c as any).codigoPiso ?? (c as any).piso_id ?? (c as any).pisoId
       const des_piso = (c as any).des_piso ?? (c as any).DES_PISO ?? (c as any).descripcion_piso ?? (c as any).DESCRIPCION_PISO ?? (c as any).descripcionPiso ?? (c as any).piso_descripcion
-      // Priorizar campo de descripción del consultorio en diferentes variantes
+      // Extraer descripción del consultorio desde múltiples campos posibles
       const descripcion = (c as any).des_consultorio
         ?? (c as any).DES_CONSULTORIO
         ?? (c as any).descripcion_consultorio
@@ -273,6 +305,7 @@ class ApiService {
         ?? (c as any).consultorio
         ?? (c as any).consultorio_nombre
       
+      // Construir objeto normalizado
       const result = {
         codigo_consultorio: codigo,
         codigo_edificio: edificio || undefined,
@@ -350,25 +383,37 @@ class ApiService {
       if (codigo) diaNombrePorCodigo.set(codigo, nombre)
     })
 
+    // Función para convertir códigos de día a nombres legibles
     const decodeDiaNombre = (codigoDia: unknown): string => {
       const code = String(codigoDia ?? '').trim()
       if (!code) return ''
+      
+      // Buscar en el catálogo de días primero
       const fromCatalog = diaNombrePorCodigo.get(code)
       if (fromCatalog) return String(fromCatalog)
+      
       const upper = code.toUpperCase()
+      
+      // Mapeo de números a días (1-7)
       const numberMap: Record<string, string> = {
         '1': 'Lunes', '2': 'Martes', '3': 'Miércoles', '4': 'Jueves', '5': 'Viernes', '6': 'Sábado', '7': 'Domingo'
       }
       if (numberMap[upper]) return numberMap[upper]
+      
+      // Mapeo de letras a días (L, M, X, J, V, S, D)
       const letterMap: Record<string, string> = {
         'L': 'Lunes', 'M': 'Martes', 'X': 'Miércoles', 'J': 'Jueves', 'V': 'Viernes', 'S': 'Sábado', 'D': 'Domingo'
       }
       if (letterMap[upper]) return letterMap[upper]
+      
+      // Mapeo de nombres completos en español
       const fullEsMap: Record<string, string> = {
         'LUNES': 'Lunes', 'MARTES': 'Martes', 'MIERCOLES': 'Miércoles', 'MIÉRCOLES': 'Miércoles',
         'JUEVES': 'Jueves', 'VIERNES': 'Viernes', 'SABADO': 'Sábado', 'SÁBADO': 'Sábado', 'DOMINGO': 'Domingo'
       }
       if (fullEsMap[upper]) return fullEsMap[upper]
+      
+      // Si no se encuentra, devolver el código original
       return code
     }
 
@@ -391,28 +436,35 @@ class ApiService {
         })
     })
 
+    // Función para convertir diferentes formatos de tiempo a HH:mm
     const toHHmm = (value: unknown): string => {
       if (value == null) return ''
       const str = String(value).trim()
       if (!str) return ''
-      // HH:mm
+      
+      // Ya está en formato HH:mm
       if (/^\d{2}:\d{2}$/.test(str)) return str
-      // HH:mm:ss -> HH:mm
+      
+      // HH:mm:ss -> HH:mm (quitar segundos)
       if (/^\d{2}:\d{2}:\d{2}$/.test(str)) return str.slice(0, 5)
-      // 830 -> 08:30, 1330 -> 13:30
+      
+      // 830 -> 08:30, 1330 -> 13:30 (formato numérico)
       if (/^\d{3,4}$/.test(str)) {
         const padded = str.padStart(4, '0')
         return `${padded.slice(0, 2)}:${padded.slice(2)}`
       }
-      // 8.3 or 8,3 etc -> fallback
+      
+      // 8.3 or 8,3 etc -> extraer solo dígitos y convertir
       const onlyDigits = str.replace(/[^0-9]/g, '')
       if (onlyDigits.length >= 3 && onlyDigits.length <= 4) {
         const padded = onlyDigits.padStart(4, '0')
         return `${padded.slice(0, 2)}:${padded.slice(2)}`
       }
+      
       return str
     }
 
+    // Función para convertir códigos de tipo a texto legible
     const decodeTipo = (t: unknown): string => {
       const v = String(t ?? '').toUpperCase()
       if (v === 'C') return 'Consulta'

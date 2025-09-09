@@ -1,35 +1,28 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPinIcon, LocateFixedIcon, Volume2, VolumeX } from 'lucide-react' // Importar iconos de ubicación y volumen
-import { useState, useRef } from "react"
+import { MapPinIcon, LocateFixedIcon, Volume2, VolumeX } from 'lucide-react'
+import { useInteractiveVideo } from "@/hooks/use-interactive-video"
 
-interface InteractiveMapProps {
+/**
+ * Props del componente VideoAgendas
+ */
+interface VideoAgendasProps {
+  /** Consultorio del médico */
   consultorio: string
-  building: string // Cambiado de 'tower' a 'building'
-  floor?: string // Añadimos la propiedad de piso
+  /** Edificio donde está ubicado */
+  building: string
+  /** Piso del consultorio (opcional) */
+  floor?: string
 }
 
-export function InteractiveMap({ consultorio, building, floor }: InteractiveMapProps) {
-  const [isMuted, setIsMuted] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      const newMutedState = !isMuted
-      videoRef.current.muted = newMutedState
-      setIsMuted(newMutedState)
-    }
-  }
-
-  // Mapeo conceptual de edificios a posiciones en el mapa (ejemplo simplificado)
-  // const buildingPositions: { [key: string]: { top: string; left: string } } = {
-  //   "kkkk": { top: "30%", left: "25%" },
-  //   "Bless": { top: "60%", left: "70%" },
-  //   // Añade más edificios y posiciones si es necesario
-  // }
-
-  // const doctorLocation = buildingPositions[building] || { top: "50%", left: "50%" } // Posición por defecto si no se encuentra el edificio
+/**
+ * Componente de video de agendas con información del hospital
+ * Utiliza el hook useInteractiveVideo para separar la lógica de control de video de la presentación
+ */
+export function VideoAgendas({ consultorio, building, floor }: VideoAgendasProps) {
+  // Usar el hook personalizado para gestionar la lógica de control de video
+  const { isMuted, videoRef, toggleMute } = useInteractiveVideo()
 
   return (
     <Card className="w-full bg-white text-accent2 rounded-xl shadow-2xl p-6 mt-8">
@@ -38,13 +31,13 @@ export function InteractiveMap({ consultorio, building, floor }: InteractiveMapP
       </CardHeader>
       <CardContent className="p-0 flex flex-col items-center justify-center">
         <div className="relative w-full h-64 md:h-96 bg-black rounded-lg overflow-hidden flex items-center justify-center border-2 border-primary">
-          {/* Video en bucle infinito, sin sonido, sin zoom, sin interacción del usuario */}
+          {/* Video en bucle infinito */}
           <div className="absolute inset-0 overflow-hidden">
             <video
               ref={videoRef}
               className="absolute left-1/2 top-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none object-cover"
               src="http://prd-hvq-desarrollos:8001/videos/video_cumbre.mp4"
-              title="Mapa en video"
+              title="Video de agendas del hospital"
               autoPlay
               muted={isMuted}
               loop
@@ -74,16 +67,6 @@ export function InteractiveMap({ consultorio, building, floor }: InteractiveMapP
             )}
           </button>
         </div>
-        {/*
-        <p className="text-2xl mt-6 text-center">
-          El consultorio <span className="font-semibold">{consultorio}</span> se encuentra en el{" "}
-          <span className="font-semibold">{building}</span>.
-          {floor && <span className="block text-xl mt-1">Piso: <span className="font-semibold">{floor}</span></span>}
-        </p>
-        <p className="text-xl text-center mt-2 text-muted-foreground">
-          (Mapa conceptual del área. Para navegación interna, consulte la recepción.)
-        </p>
-        */}
       </CardContent>
     </Card>
   )

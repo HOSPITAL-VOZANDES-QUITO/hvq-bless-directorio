@@ -2,11 +2,12 @@ import axios from "axios"
 import { config } from "./config"
 import type { AuthTokens, AuthError } from "./types"
 
-// Variables de estado para los tokens
+// Variables de estado global para almacenar los tokens de autenticación
 let accessToken = ''
 let refreshToken = ''
 
 // Función para obtener credenciales desde variables de entorno
+// Usa valores por defecto si no están configuradas las variables
 const getCredentials = (): { username: string; password: string } => {
   const username = process.env.NEXT_PUBLIC_AUTH_USERNAME || 'middleware_prod'
   const password = process.env.NEXT_PUBLIC_AUTH_PASSWORD || 'MH@2025!Api'
@@ -18,7 +19,7 @@ const getCredentials = (): { username: string; password: string } => {
   return { username, password }
 }
 
-// Función para manejar errores de autenticación
+// Función para manejar y normalizar errores de autenticación
 const handleAuthError = (error: unknown): AuthError => {
   if (axios.isAxiosError(error)) {
     return {
@@ -34,11 +35,12 @@ const handleAuthError = (error: unknown): AuthError => {
   return { message: 'Error desconocido de autenticación' }
 }
 
-// Función para hacer login
+// Función para realizar login y obtener tokens de autenticación
 const login = async (): Promise<AuthTokens> => {
   try {
     const { username, password } = getCredentials()
     
+    // Realizar petición de login al endpoint de autenticación
     const response = await axios.post(
       `${config.api.authUrl}/Auth/login`,
       new URLSearchParams({ username, password }),
@@ -65,13 +67,14 @@ const login = async (): Promise<AuthTokens> => {
   }
 }
 
-// Función para refrescar el token
+// Función para refrescar el token de acceso usando el refresh token
 const refreshAuthToken = async (): Promise<AuthTokens> => {
   try {
     if (!refreshToken) {
       throw new Error('No hay token de refresh disponible')
     }
     
+    // Realizar petición de refresh al endpoint de autenticación
     const response = await axios.post(
       `${config.api.authUrl}/Auth/refresh`,
       new URLSearchParams({ refreshToken }),
@@ -99,6 +102,7 @@ const refreshAuthToken = async (): Promise<AuthTokens> => {
 }
 
 // Función principal para obtener el token de acceso
+// Si no hay token, realiza login automáticamente
 export const getAccessToken = async (): Promise<string> => {
   if (!accessToken) {
     const tokens = await login()
@@ -109,6 +113,7 @@ export const getAccessToken = async (): Promise<string> => {
 }
 
 // Función para refrescar el token de autenticación
+// Si falla el refresh, intenta hacer login nuevamente
 export const refreshAuthTokenPublic = async (): Promise<void> => {
   try {
     const tokens = await refreshAuthToken()
@@ -122,13 +127,13 @@ export const refreshAuthTokenPublic = async (): Promise<void> => {
   }
 }
 
-// Función para limpiar los tokens (útil para logout)
+// Función para limpiar los tokens almacenados (útil para logout)
 export const clearAuthTokens = (): void => {
   accessToken = ''
   refreshToken = ''
 }
 
-// Función para verificar si hay un token válido
+// Función para verificar si hay un token válido almacenado
 export const hasValidToken = (): boolean => {
   return Boolean(accessToken)
 }

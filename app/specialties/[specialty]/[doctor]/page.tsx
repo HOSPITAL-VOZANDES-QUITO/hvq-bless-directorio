@@ -4,314 +4,51 @@ import { DirectorioLayout } from "@/components/directorio-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import "@/styles/pages.css"
 import { notFound } from "next/navigation"
-import { useState, useEffect, useMemo, useRef } from "react"
 import { DoorOpenIcon, BuildingIcon, CalendarCheckIcon, ClockIcon, MapPinIcon, AlertCircleIcon, UserRoundIcon as UserRoundMedical, ClipboardListIcon, ScissorsIcon } from 'lucide-react'
-import { InteractiveMap } from "@/components/interactive-map"
-import axios from "axios"
-import { getAccessToken } from "@/lib/auth"
+import { VideoAgendas } from "@/components/video-agendas"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useRouter, useParams } from "next/navigation"
-import { apiService } from "@/lib/api-service"
-import { config } from "@/lib/config"
-import { extractHHmm, formatHHmmTo12h } from "@/lib/utils"
+import { useDoctorSchedule } from "@/hooks/use-doctor-schedule"
 
-// Normaliza textos a slug: minúsculas, sin acentos, sólo [a-z0-9-]
-const slugify = (input: string): string => {
-  return String(input || "")
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-interface DoctorSchedule {
-  time: string
-  room: string
-  building: string
-  floor?: string
-  tipo?: string
-  specialtyLabel?: string
-}
-
-interface DoctorInfo {
-  id: number
-  name: string
-  specialty: string
-  specialtyId: number
-  especialidades: Array<{id: string, label: string}>
-  photo?: string
-}
-
+/**
+ * Página de horarios de médico
+ * Utiliza el hook useDoctorSchedule para separar la lógica de negocio de la presentación
+ */
 export default function SchedulePage() {
   const router = useRouter()
   const { doctor: doctorSlug, specialty: specialtySlug } = useParams<{ specialty: string; doctor: string }>()
-  const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null)
-  const [doctorSchedules, setDoctorSchedules] = useState<Record<string, DoctorSchedule[]> | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedDay, setSelectedDay] = useState<string | null>(null)
-  const [selectedKind, setSelectedKind] = useState<'consulta' | 'procedimiento' | null>(null)
-  const detailsRef = useRef<HTMLDivElement | null>(null)
-  const [photoError, setPhotoError] = useState(false)
-  const [source, setSource] = useState<string | null>(null)
+  
+  // Usar el hook personalizado para gestionar toda la lógica de negocio
+  const {
+    doctorInfo,
+    doctorSchedules,
+    selectedDay,
+    selectedKind,
+    loading,
+    error,
+    source,
+    detailsRef,
+    photoError,
+    setPhotoError,
+    availableDays,
+    consultaDays,
+    procedimientoDays,
+    dayNames,
+    isDaySelected,
+    getBuildingDisplayName,
+    isProcedure,
+    isConsulta,
+    setSelectedDay,
+    setSelectedKind,
+    reload
+  } = useDoctorSchedule(doctorSlug, specialtySlug)
 
-  const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-  const dayNames: { [key: string]: string } = {
-    monday: "Lunes",
-    tuesday: "Martes",
-    wednesday: "Miércoles",
-    thursday: "Jueves",
-    friday: "Viernes",
-    saturday: "Sábado",
-    sunday: "Domingo",
-  }
-
-
-  const isProcedure = (tipo?: string) => {
-    const t = (tipo || '').toLowerCase()
-    return /(proced|qx|quir|cirug)/.test(t)
-  }
-
-  const isConsulta = (tipo?: string) => !isProcedure(tipo)
-
-  const normalizeDayKey = (nameOrKey: string) => {
-    const key = (nameOrKey || '').toLowerCase()
-    const map: Record<string, string> = {
-      lunes: 'monday',
-      martes: 'tuesday',
-      miércoles: 'wednesday',
-      miercoles: 'wednesday',
-      jueves: 'thursday',
-      viernes: 'friday',
-      sábado: 'saturday',
-      sabado: 'saturday',
-      domingo: 'sunday',
-    }
-    return map[key] || key
-  }
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const token = await getAccessToken()
-
-        // 1. Resolver especialidad por ID o por slug de manera directa (sin fallbacks extra)
-        const isSpecialtyId = /^\d+$/.test(specialtySlug)
-        let foundSpecialty: any
-        if (isSpecialtyId) {
-          const res = await axios.get(`${config.api.authUrl}/especialidades/${specialtySlug}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          foundSpecialty = res.data
-        } else {
-          const res = await axios.get(`${config.api.authUrl}/especialidades/agenda`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          const list = Array.isArray(res.data) ? res.data : []
-          foundSpecialty = list.find((spec: any) => slugify(String(spec.descripcion || '')) === slugify(String(specialtySlug)))
-        }
-
-        if (!foundSpecialty) throw new Error('Especialidad no encontrada')
-
-        // 2. Resolver médico por ID o por slug de manera directa
-        const isDoctorId = /^\d+$/.test(doctorSlug)
-        let doctorData: any
-        let doctorIdToUse: number
-        if (isDoctorId) {
-          const res = await axios.get(`${config.api.authUrl}/medico/agenda/${doctorSlug}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          doctorData = res.data
-          doctorIdToUse = doctorData.id
-        } else {
-          const res = await axios.get(`${config.api.authUrl}/medico/especialidad/${foundSpecialty.especialidadId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          const list = Array.isArray(res.data) ? res.data : []
-          const foundDoctor = list.find((doc: any) => slugify(String(doc.nombres || '')) === slugify(String(doctorSlug)))
-          if (!foundDoctor) throw new Error('Médico no encontrado')
-          const detail = await axios.get(`${config.api.authUrl}/medico/agenda/${foundDoctor.id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          doctorData = detail.data
-          doctorIdToUse = foundDoctor.id
-        }
-
-        // 3. Configurar información del médico
-        // Extraer todas las especialidades usando la misma lógica que search
-        let especialidades: Array<{id: string, label: string}> = []
-        
-        if (Array.isArray(doctorData.especialidades) && doctorData.especialidades.length > 0) {
-          especialidades = doctorData.especialidades.map((esp: any) => {
-            if (esp && typeof esp === "object") {
-              const espId = String((esp as any).especialidadId ?? (esp as any).id ?? (esp as any).codigo ?? "")
-              const espLabel = String((esp as any).descripcion ?? (esp as any).nombre ?? espId)
-              return { id: espId, label: espLabel }
-            } else {
-              const espStr = String(esp)
-              return { id: espStr, label: espStr }
-            }
-          }).filter((esp: any) => esp.id.trim().length > 0)
-        } else {
-          // Fallback para médicos con especialidad individual
-          const singleSpecialtyId = String(foundSpecialty.especialidadId ?? foundSpecialty.especialidad ?? "")
-          const singleSpecialtyLabel = String(foundSpecialty.descripcion ?? foundSpecialty.nombre ?? singleSpecialtyId)
-          if (singleSpecialtyId.trim().length > 0) {
-            especialidades = [{ id: singleSpecialtyId, label: singleSpecialtyLabel }]
-          }
-        }
-
-        setDoctorInfo({
-          id: doctorData.id,
-          name: doctorData.nombres || 'Nombre no disponible',
-          specialty: foundSpecialty.descripcion || 'Especialidad no disponible',
-          specialtyId: foundSpecialty.especialidadId,
-          especialidades: especialidades,
-          photo: doctorData.retrato
-        })
-
-        // 4. Construir horarios con el método de orquestación
-        const providerId = doctorData.codigoPrestador ?? doctorData.codigo_prestador ?? doctorIdToUse
-        const urlParams = new URLSearchParams(window.location.search)
-        const fromSource = urlParams.get('source')
-        const passSpecialtyId = fromSource === 'specialty'
-        setSource(fromSource)
-        const detalladasRes = passSpecialtyId 
-          ? await apiService.getAgendasDetalladasPorMedico(String(providerId), foundSpecialty.especialidadId)
-          : await apiService.getAgendasDetalladasPorMedico(String(providerId))
-        const detalladas = Array.isArray(detalladasRes.data)
-          ? (detalladasRes.data as any[])
-          : []
-
-
-        const formattedSchedules: Record<string, DoctorSchedule[]> = {}
-        detalladas.forEach((item: any) => {
-          const dayKey = normalizeDayKey(String(item.diaNombre || ''))
-          if (!daysOfWeek.includes(dayKey)) return
-          const rawInicio = (item.horaInicioHHmm ?? item.hora_inicio ?? item.horaInicio ?? item.hora) as unknown
-          const rawFin = (item.horaFinHHmm ?? item.hora_fin ?? item.horaFin ?? item.horarioFin) as unknown
-          const inicio = formatHHmmTo12h(extractHHmm(rawInicio))
-          const fin = formatHHmmTo12h(extractHHmm(rawFin))
-          const time = fin ? `${inicio} - ${fin}` : inicio
-
-          const entry: DoctorSchedule = {
-            time,
-            room: item.consultorioDescripcion || 'No especificado',
-            building: item.edificioDescripcion || (item as any).buildingCode || 'No especificado',
-            floor: item.piso || (item as any).pisoDescripcion || (item as any).des_piso || 'No especificado',
-            tipo: item.tipoTexto || undefined,
-            specialtyLabel: (item as any).especialidad || undefined,
-          }
-          if (!formattedSchedules[dayKey]) formattedSchedules[dayKey] = []
-          formattedSchedules[dayKey].push(entry)
-        })
-
-        setDoctorSchedules(formattedSchedules)
-        
-        // Auto-expandir lógica: prioridad 1) día actual, 2) un solo día disponible
-        const availableDays = Object.keys(formattedSchedules).filter((d) => daysOfWeek.includes(d))
-        
-        // Obtener el día actual
-        const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' }).toLowerCase()
-        const todayKey = normalizeDayKey(today)
-        
-        let dayToSelect: string | null = null
-        
-        // Prioridad 1: Si el día actual está disponible, seleccionarlo
-        if (availableDays.includes(todayKey)) {
-          dayToSelect = todayKey
-        }
-        // Prioridad 2: Si solo hay un día disponible, seleccionarlo
-        else if (availableDays.length === 1) {
-          dayToSelect = availableDays[0]
-        }
-        
-        if (dayToSelect) {
-          setSelectedDay(dayToSelect)
-          // Determinar el tipo automáticamente si solo hay un tipo en ese día
-          const daySchedules = formattedSchedules[dayToSelect]
-          const hasConsulta = daySchedules.some(sched => isConsulta(sched.tipo))
-          const hasProcedimiento = daySchedules.some(sched => isProcedure(sched.tipo))
-          
-          if (hasConsulta && !hasProcedimiento) {
-            setSelectedKind('consulta')
-          } else if (hasProcedimiento && !hasConsulta) {
-            setSelectedKind('procedimiento')
-          }
-          // Si tiene ambos tipos, no establecer selectedKind para mostrar todos
-        }
-        
-        setLoading(false)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido')
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [doctorSlug, specialtySlug])
-
-  const availableDays = useMemo(() => {
-    return Object.keys(doctorSchedules || {}).filter((d) => daysOfWeek.includes(d))
-  }, [doctorSchedules])
-
-  const consultaDays = useMemo(() => {
-    return daysOfWeek.filter((day) => {
-      const list = (doctorSchedules || {})[day]
-      if (!list || list.length === 0) return false
-      return list.some((s) => isConsulta(s.tipo))
-    })
-  }, [doctorSchedules])
-
-  const procedimientoDays = useMemo(() => {
-    return daysOfWeek.filter((day) => {
-      const list = (doctorSchedules || {})[day]
-      if (!list || list.length === 0) return false
-      return list.some((s) => isProcedure(s.tipo))
-    })
-  }, [doctorSchedules])
-
-  useEffect(() => {
-    if (selectedDay && !availableDays.includes(selectedDay)) {
-      setSelectedDay(null)
-    }
-  }, [selectedDay, availableDays])
-
-  useEffect(() => {
-    if (selectedDay && doctorSchedules?.[selectedDay]) {
-      detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [selectedDay, doctorSchedules])
-
-  // Función para determinar si un día debe estar seleccionado visualmente
-  const isDaySelected = (day: string, kind: 'consulta' | 'procedimiento') => {
-    if (selectedDay !== day) return false
-    if (!selectedKind) return false
-    return selectedKind === kind
-  }
-
-  // Función para validar y mostrar el nombre del edificio según el código
-  const getBuildingDisplayName = (buildingCode: string | number | undefined): string => {
-    if (!buildingCode) return 'No especificado'
-    
-    const code = String(buildingCode).trim()
-    
-    // Validación específica para códigos 1 y 2
-    if (code === '1') return 'Principal'
-    if (code === '2') return 'Torre Bless'
-    
-    // Para otros códigos, mantener la lógica actual
-    return code
-  }
-
+  // Estado de carga
   if (loading) {
     return (
       <DirectorioLayout>
-        <div className="container mx-auto px-4 py-8" >
+        <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col items-center justify-center min-h-[300px] gap-6">
             <div className="flex items-center space-x-4 w-full max-w-3xl">
               <Skeleton className="h-24 w-24 rounded-full bg-[#E5E5E5]" />
@@ -336,6 +73,7 @@ export default function SchedulePage() {
     )
   }
 
+  // Estado de error
   if (error) {
     return (
       <DirectorioLayout>
@@ -347,7 +85,7 @@ export default function SchedulePage() {
             <div className="flex justify-center gap-4">
               <Button
                 variant="destructive"
-                onClick={() => window.location.reload()}
+                onClick={reload}
                 className="bg-[#7F0C43] hover:bg-[#C84D80] text-white"
                 style={{ fontFamily: "Arial, sans-serif" }}
               >
@@ -368,6 +106,7 @@ export default function SchedulePage() {
     )
   }
 
+  // Sin datos del médico
   if (!doctorInfo || !doctorSchedules) {
     notFound()
   }
@@ -375,7 +114,7 @@ export default function SchedulePage() {
   return (
     <DirectorioLayout>
       <div className="container mx-auto px-4 py-8">
-        {/* Doctor Profile Section */}
+        {/* Sección de perfil del médico */}
         <div className="sticky top-32 z-30 w-full bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b rounded-xl shadow-sm p-6 border border-[#E5E5E5] mb-10">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-[#F9F4F6] overflow-hidden flex items-center justify-center">
@@ -435,7 +174,7 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* Schedule Section */}
+        {/* Sección de horarios */}
         <section className="mb-12 flex flex-col items-center">
           <h1 className="doctor-schedule-title">Horarios de atención</h1>
 
@@ -600,14 +339,12 @@ export default function SchedulePage() {
           </div>
         </section>
 
-        {/* Selected Day Details */}
+        {/* Detalles del día seleccionado */}
         <div ref={detailsRef} />
         {selectedDay && doctorSchedules?.[selectedDay] && (
           <div className="w-full flex flex-col items-center">
             <h2 className="text-2xl font-bold text-[#7F0C43] mb-6 text-center" style={{ fontFamily: "'Century Gothic', sans-serif" }}>
               Detalles día {dayNames[selectedDay]}
-
-              
             </h2>
             
             <div className="w-full max-w-4xl mx-auto space-y-3">
@@ -662,9 +399,9 @@ export default function SchedulePage() {
                 ))}
             </div>
 
-            {/* Mapa interactivo - usar la primera consulta/procedimiento para el mapa */}
+            {/* Video de agendas */}
             <div className="w-full max-w-3xl mx-auto mt-8">
-              <InteractiveMap
+              <VideoAgendas
                 consultorio={((doctorSchedules[selectedDay] || [])
                   .filter(sched => {
                     if (!selectedKind) return true
