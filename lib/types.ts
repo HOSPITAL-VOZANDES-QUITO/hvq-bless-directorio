@@ -81,6 +81,7 @@ export interface AgendaDetallada {
   hora_fin?: string | number
   tipo?: string
   codigo_consultorio?: string | number
+  especialidadId?: string | number | (string | number)[]
 
   // Derivados / decodificados
   especialidad?: string

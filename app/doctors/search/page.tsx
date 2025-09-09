@@ -37,31 +37,45 @@ export default function DoctorSearchPage() {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
-
+  // Traer todas las especialidades que tenga cada médico
     return doctors
       .map((d: any) => {
         const id = String(d.id ?? d.codigo ?? d.codigo_prestador ?? d.codigoPrestador ?? "")
         const name = String(d.nombres ?? d.nombre ?? "")
-        let specialtyId = ""
-        let specialtyLabel = ""
+        
+        // Extraer todas las especialidades
+        let especialidades: Array<{id: string, label: string}> = []
+        
         if (Array.isArray(d.especialidades) && d.especialidades.length > 0) {
-          const first = d.especialidades[0]
-          if (first && typeof first === "object") {
-            specialtyId = String((first as any).especialidadId ?? (first as any).id ?? (first as any).codigo ?? "")
-            specialtyLabel = String((first as any).descripcion ?? "")
-          } else {
-            specialtyId = String(first)
-          }
+          especialidades = d.especialidades.map((esp: any) => {
+            if (esp && typeof esp === "object") {
+              const espId = String((esp as any).especialidadId ?? (esp as any).id ?? (esp as any).codigo ?? "")
+              const espLabel = String((esp as any).descripcion ?? (esp as any).nombre ?? espId)
+              return { id: espId, label: espLabel }
+            } else {
+              const espStr = String(esp)
+              return { id: espStr, label: espStr }
+            }
+          }).filter((esp: any) => esp.id.trim().length > 0)
         } else {
-          specialtyId = String(d.especialidadId ?? d.especialidad ?? "")
+          // Fallback para médicos con especialidad individual
+          const singleSpecialtyId = String(d.especialidadId ?? d.especialidad ?? "")
+          if (singleSpecialtyId.trim().length > 0) {
+            especialidades = [{ id: singleSpecialtyId, label: singleSpecialtyId }]
+          }
         }
-        if (!specialtyLabel) specialtyLabel = specialtyId
+        
+        // Para compatibilidad con el componente actual, usar la primera especialidad como principal
+        const specialtyId = especialidades.length > 0 ? especialidades[0].id : ""
+        const specialtyLabel = especialidades.length > 0 ? especialidades[0].label : ""
+        
         const photo = d.retrato ?? d.foto ?? null
         return {
           id,
           name,
-          specialtyId,
-          specialtyLabel,
+          specialtyId, // Especialidad principal (primera)
+          specialtyLabel, // Etiqueta de especialidad principal
+          especialidades, // Todas las especialidades
           photo,
           norm: normalize(name),
         }
@@ -202,6 +216,7 @@ export default function DoctorSearchPage() {
                           doctor={doctor}
                           specialtyName={specLabel}
                           basePath={`/specialties/${specSlug}`}
+                          queryParams={{ source: 'doctor' }}
                         />
                       </div>
                     )

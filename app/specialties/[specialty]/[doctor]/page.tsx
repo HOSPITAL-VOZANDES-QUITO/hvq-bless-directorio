@@ -32,6 +32,7 @@ interface DoctorSchedule {
   building: string
   floor?: string
   tipo?: string
+  specialtyLabel?: string
 }
 
 interface DoctorInfo {
@@ -39,6 +40,7 @@ interface DoctorInfo {
   name: string
   specialty: string
   specialtyId: number
+  especialidades: Array<{id: string, label: string}>
   photo?: string
 }
 
@@ -53,6 +55,7 @@ export default function SchedulePage() {
   const [selectedKind, setSelectedKind] = useState<'consulta' | 'procedimiento' | null>(null)
   const detailsRef = useRef<HTMLDivElement | null>(null)
   const [photoError, setPhotoError] = useState(false)
+  const [source, setSource] = useState<string | null>(null)
 
   const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
   const dayNames: { [key: string]: string } = {
@@ -118,7 +121,7 @@ export default function SchedulePage() {
         let doctorData: any
         let doctorIdToUse: number
         if (isDoctorId) {
-          const res = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/${doctorSlug}`, {
+          const res = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/agenda/${doctorSlug}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           doctorData = res.data
@@ -130,7 +133,7 @@ export default function SchedulePage() {
           const list = Array.isArray(res.data) ? res.data : []
           const foundDoctor = list.find((doc: any) => slugify(String(doc.nombres || '')) === slugify(String(doctorSlug)))
           if (!foundDoctor) throw new Error('Médico no encontrado')
-          const detail = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/${foundDoctor.id}`, {
+          const detail = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/agenda/${foundDoctor.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
           doctorData = detail.data
@@ -138,22 +141,51 @@ export default function SchedulePage() {
         }
 
         // 3. Configurar información del médico
+        // Extraer todas las especialidades usando la misma lógica que search
+        let especialidades: Array<{id: string, label: string}> = []
+        
+        if (Array.isArray(doctorData.especialidades) && doctorData.especialidades.length > 0) {
+          especialidades = doctorData.especialidades.map((esp: any) => {
+            if (esp && typeof esp === "object") {
+              const espId = String((esp as any).especialidadId ?? (esp as any).id ?? (esp as any).codigo ?? "")
+              const espLabel = String((esp as any).descripcion ?? (esp as any).nombre ?? espId)
+              return { id: espId, label: espLabel }
+            } else {
+              const espStr = String(esp)
+              return { id: espStr, label: espStr }
+            }
+          }).filter((esp: any) => esp.id.trim().length > 0)
+        } else {
+          // Fallback para médicos con especialidad individual
+          const singleSpecialtyId = String(foundSpecialty.especialidadId ?? foundSpecialty.especialidad ?? "")
+          const singleSpecialtyLabel = String(foundSpecialty.descripcion ?? foundSpecialty.nombre ?? singleSpecialtyId)
+          if (singleSpecialtyId.trim().length > 0) {
+            especialidades = [{ id: singleSpecialtyId, label: singleSpecialtyLabel }]
+          }
+        }
+
         setDoctorInfo({
           id: doctorData.id,
           name: doctorData.nombres || 'Nombre no disponible',
           specialty: foundSpecialty.descripcion || 'Especialidad no disponible',
           specialtyId: foundSpecialty.especialidadId,
+          especialidades: especialidades,
           photo: doctorData.retrato
         })
 
         // 4. Construir horarios con el método de orquestación
         const providerId = doctorData.codigoPrestador ?? doctorData.codigo_prestador ?? doctorIdToUse
-        const detalladasRes = await apiService.getAgendasDetalladasPorMedico(String(providerId))
+        const urlParams = new URLSearchParams(window.location.search)
+        const fromSource = urlParams.get('source')
+        const passSpecialtyId = fromSource === 'specialty'
+        setSource(fromSource)
+        const detalladasRes = passSpecialtyId 
+          ? await apiService.getAgendasDetalladasPorMedico(String(providerId), foundSpecialty.especialidadId)
+          : await apiService.getAgendasDetalladasPorMedico(String(providerId))
         const detalladas = Array.isArray(detalladasRes.data)
           ? (detalladasRes.data as any[])
           : []
 
-        // Eliminar datos hardcodeados para consultorio/piso; usar solo lo que entregue la API
 
         const formattedSchedules: Record<string, DoctorSchedule[]> = {}
         detalladas.forEach((item: any) => {
@@ -171,6 +203,7 @@ export default function SchedulePage() {
             building: item.edificioDescripcion || (item as any).buildingCode || 'No especificado',
             floor: item.piso || (item as any).pisoDescripcion || (item as any).des_piso || 'No especificado',
             tipo: item.tipoTexto || undefined,
+            specialtyLabel: (item as any).especialidad || undefined,
           }
           if (!formattedSchedules[dayKey]) formattedSchedules[dayKey] = []
           formattedSchedules[dayKey].push(entry)
@@ -213,8 +246,6 @@ export default function SchedulePage() {
         
         setLoading(false)
       } catch (err) {
-        // En producción, no deberíamos loggear errores de usuario
-        // console.error('Error fetching data:', err)
         setError(err instanceof Error ? err.message : 'Error desconocido')
         setLoading(false)
       }
@@ -361,7 +392,35 @@ export default function SchedulePage() {
 
             <div className="text-center md:text-left">
               <h1 className="text-3xl font-bold text-[#333333] mb-1" style={{ fontFamily: "'Century Gothic', sans-serif" }}>Dr. {doctorInfo.name}</h1>
-              <p className="text-lg text-[#7F0C43] font-medium mb-3" style={{ fontFamily: "'Century Gothic', sans-serif" }}>{doctorInfo.specialty}</p>
+              
+              {/* Mostrar especialidades según el origen */}
+              <div className="mb-3">
+                {source === 'specialty' ? (
+                  // Desde búsqueda por especialidad: mostrar solo la especialidad seleccionada
+                  <p className="text-lg text-[#7F0C43] font-medium" style={{ fontFamily: "'Century Gothic', sans-serif" }}>
+                    {doctorInfo.specialty}
+                  </p>
+                ) : (
+                  // Desde búsqueda por médico: mostrar todas las especialidades
+                  doctorInfo.especialidades && doctorInfo.especialidades.length > 0 ? (
+                    <div className="space-y-1">
+                      {doctorInfo.especialidades.map((esp, index) => (
+                        <p 
+                          key={`${esp.id}-${index}`}
+                          className="text-lg text-[#7F0C43] font-medium" 
+                          style={{ fontFamily: "'Century Gothic', sans-serif" }}
+                        >
+                          {esp.label}
+                        </p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-lg text-[#7F0C43] font-medium" style={{ fontFamily: "'Century Gothic', sans-serif" }}>
+                      {doctorInfo.specialty}
+                    </p>
+                  )
+                )}
+              </div>
 
               <div className="flex flex-wrap justify-center md:justify-start gap-2">
                 {availableDays.length > 0 && (
@@ -588,6 +647,13 @@ export default function SchedulePage() {
                           <span className="doctor-schedule-details-label font-medium">Ubicación:</span>
                           <span className="text-2xl">{sched.floor || 'No especificado'}</span>
                         </div>
+                        {source !== 'specialty' && sched.specialtyLabel && (
+                          <div className="flex items-center gap-2">
+                            <ClipboardListIcon className="doctor-schedule-details-icon h-5 w-5 text-[#7F0C43]" />
+                            <span className="doctor-schedule-details-label font-medium">Especialidad:</span>
+                            <span className="text-2xl">{sched.specialtyLabel}</span>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

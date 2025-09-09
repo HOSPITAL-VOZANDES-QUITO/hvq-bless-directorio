@@ -10,14 +10,16 @@ interface DoctorCardProps {
     id: string
     name: string
     photo?: string | null
+    especialidades?: Array<{id: string, label: string}>
   }
-  specialtyName: string
+  specialtyName: string | string[]
   basePath: string
   className?: string
   variant?: 'default' | 'compact'
+  queryParams?: Record<string, string>
 }
 
-export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, basePath, className, variant = 'default' }: DoctorCardProps) {
+export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, basePath, className, variant = 'default', queryParams }: DoctorCardProps) {
   const [hasImageError, setHasImageError] = useState(false)
   const [isImageLoading, setIsImageLoading] = useState(Boolean(doctor.photo))
   const [showIconFallback, setShowIconFallback] = useState(false)
@@ -93,7 +95,11 @@ export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, base
     : (isLongSpecialty ? 'text-xs' : 'text-sm')
 
   return (
-    <Link key={doctor.id} href={`${basePath}/${doctor.id}`} passHref>
+    <Link 
+      key={doctor.id} 
+      href={`${basePath}/${doctor.id}${queryParams ? `?${new URLSearchParams(queryParams).toString()}` : ''}`} 
+      passHref
+    >
       <Card 
         className={`bg-secondary text-accent2 hover:bg-primary hover:text-primary-foreground 
                     transition-colors duration-200 cursor-pointer rounded-2xl shadow-lg 
@@ -160,9 +166,21 @@ export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, base
               {doctor.name}
             </CardTitle>
             {!isCompact && (
-              <p className={`doctor-card-specialty ${specialtySize} text-accent2 text-center leading-tight line-clamp-2`}>
-                {specialtyName}
-              </p>
+              <div className={`doctor-card-specialty ${specialtySize} text-accent2 group-hover:text-primary-foreground text-center leading-tight`}>
+                {doctor.especialidades && doctor.especialidades.length > 1 ? (
+                  <div className="space-y-1">
+                    {doctor.especialidades.map((esp, index) => (
+                      <p key={esp.id} className="line-clamp-1">
+                        {esp.label}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="line-clamp-2">
+                    {specialtyName}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </CardContent>

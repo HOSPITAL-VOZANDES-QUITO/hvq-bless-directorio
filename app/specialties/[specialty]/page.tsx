@@ -84,7 +84,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
         }
 
         // 2. Obtener todos los médicos con sus detalles
-        const allDoctorsResponse = await axios.get('http://10.129.180.166:36560/api3/v1/medico', {
+        const allDoctorsResponse = await axios.get('http://10.129.180.166:36560/api3/v1/medico/agenda2', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
@@ -105,7 +105,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
           const results = await Promise.allSettled(
             allDoctorsResponse.data.map(async (doctorId: number) => {
               try {
-                const doctorResponse = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/${doctorId}`, {
+                const doctorResponse = await axios.get(`http://10.129.180.166:36560/api3/v1/medico/agenda2/${doctorId}`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'
@@ -218,6 +218,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
                       }}
                       specialtyName={specialtyName}
                       basePath={`/specialties/${resolvedSpecialtyId || specialtyId}`}
+                      queryParams={{ source: 'specialty' }}
                       className=""
                       variant="compact"
                     />

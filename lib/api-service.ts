@@ -204,7 +204,10 @@ class ApiService {
   }
 
   // ===== ORQUESTACIÓN: AGENDAS DETALLADAS POR MÉDICO =====
-  async getAgendasDetalladasPorMedico(codigoPrestador: string | number): Promise<ApiResponse<AgendaDetallada[]>> {
+  async getAgendasDetalladasPorMedico(
+    codigoPrestador: string | number,
+    especialidadId?: string | number | (string | number)[]
+  ): Promise<ApiResponse<AgendaDetallada[]>> {
     // Cargar en paralelo
     const inputCodigo = String(codigoPrestador)
     const [agendasRes, medicosRes, consultoriosRes, edificiosRes, diasRes] = await Promise.all([
@@ -425,6 +428,32 @@ class ApiService {
       agendas = []
     }
 
+    // FILTRAR POR ESPECIALIDAD SI SE PROPORCIONA
+    if (especialidadId != null && agendas.length > 0) {
+      // Normalizar especialidadId a array para manejar múltiples especialidades
+      const wantedSpecialtyIds = Array.isArray(especialidadId) 
+        ? especialidadId.map(id => String(id))
+        : [String(especialidadId)]
+      
+      agendas = agendas.filter((a) => {
+        // El codigo_item_agendamiento ES el especialidadId - comparar directamente
+        const codigoItemAgendamiento = String(
+          (a as any).codigo_item_agendamiento ?? 
+          (a as any).id ?? 
+          (a as any).codigo ?? 
+          ''
+        ).trim()
+        
+        // Comparar codigo_item_agendamiento con cualquiera de los especialidadIds
+        if (codigoItemAgendamiento && /^\d+$/.test(codigoItemAgendamiento)) {
+          return wantedSpecialtyIds.includes(codigoItemAgendamiento)
+        }
+        
+        // Si no podemos determinar el codigo_item_agendamiento, no incluir
+        return false
+      })
+    }
+
     const detalladas: AgendaDetallada[] = agendas.map((a) => {
       // Verificación adicional: asegurar que la agenda pertenece al médico correcto
       const prestadorId = String(
@@ -505,9 +534,80 @@ class ApiService {
 
       const medicoRaw = medicoPorId.get(prestadorId)
       const medicoNombre = String((medicoRaw as any)?.nombres ?? '')
-      const especialidad = Array.isArray((medicoRaw as any)?.especialidades) && (medicoRaw as any).especialidades.length > 0
-        ? String((medicoRaw as any).especialidades[0])
-        : undefined
+      
+      // Determinar especialidad específica para esta agenda
+      let especialidad: string | undefined
+      
+      // Prioridad 1: Si se filtró por especialidad, usar esa especialidad
+      if (especialidadId != null) {
+        const especialidades = Array.isArray((medicoRaw as any)?.especialidades) 
+          ? (medicoRaw as any).especialidades 
+          : []
+        
+        // Normalizar especialidadId a array para buscar la especialidad correcta
+        const wantedSpecialtyIds = Array.isArray(especialidadId) 
+          ? especialidadId.map(id => String(id))
+          : [String(especialidadId)]
+        
+        // Buscar la especialidad que coincida con el codigo_item_agendamiento de esta agenda
+        const codigoItemAgendamiento = String(
+          (a as any).codigo_item_agendamiento ?? 
+          (a as any).id ?? 
+          (a as any).codigo ?? 
+          ''
+        ).trim()
+        
+        if (codigoItemAgendamiento && wantedSpecialtyIds.includes(codigoItemAgendamiento)) {
+          const especialidadEncontrada = especialidades.find((esp: any) => {
+            const espId = String(esp?.especialidadId ?? esp?.id ?? esp?.codigo ?? esp ?? '')
+            return espId === codigoItemAgendamiento
+          })
+          
+          if (especialidadEncontrada && typeof especialidadEncontrada === 'object') {
+            especialidad = String((especialidadEncontrada as any).descripcion ?? (especialidadEncontrada as any).nombre ?? '')
+          } else if (especialidadEncontrada) {
+            especialidad = String(especialidadEncontrada)
+          }
+        }
+      }
+      
+      // Prioridad 2: Intentar obtener especialidad usando codigo_item_agendamiento
+      if (!especialidad) {
+        const codigoItemAgendamiento = String(
+          (a as any).codigo_item_agendamiento ?? 
+          (a as any).id ?? 
+          (a as any).codigo ?? 
+          ''
+        ).trim()
+        
+        if (codigoItemAgendamiento && (medicoRaw as any)?.especialidades) {
+          const especialidades = Array.isArray((medicoRaw as any).especialidades) 
+            ? (medicoRaw as any).especialidades 
+            : []
+          
+          // El codigo_item_agendamiento corresponde al especialidadId
+          const match = especialidades.find((esp: any) => {
+            const espId = String(esp?.especialidadId ?? esp?.id ?? esp?.codigo ?? esp ?? '')
+            return espId === codigoItemAgendamiento
+          })
+          
+          if (match && typeof match === 'object') {
+            especialidad = String((match as any).descripcion ?? (match as any).nombre ?? '')
+          } else if (match) {
+            especialidad = String(match)
+          }
+        }
+      }
+      
+      // Prioridad 3: Fallback a la primera especialidad del médico
+      if (!especialidad && Array.isArray((medicoRaw as any)?.especialidades) && (medicoRaw as any).especialidades.length > 0) {
+        const primera = (medicoRaw as any).especialidades[0]
+        if (primera && typeof primera === 'object') {
+          especialidad = String((primera as any).descripcion ?? (primera as any).nombre ?? '')
+        } else if (primera) {
+          especialidad = String(primera)
+        }
+      }
 
       const diaCodigo = String(
         (a as any).codigo_dia ?? (a as any).dia ?? (a as any).diaCodigo ?? ''
