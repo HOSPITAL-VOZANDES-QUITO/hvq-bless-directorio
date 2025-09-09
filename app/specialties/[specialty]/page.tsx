@@ -59,7 +59,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
         const isId = /^\d+$/.test(String(specialtyId))
         let resolvedIdForFilter = String(specialtyId)
         if (isId) {
-          const specialtyResponse = await axios.get(`${config.auth.baseUrl}/especialidades/${specialtyId}`, {
+          const specialtyResponse = await axios.get(`${config.api.authUrl}/especialidades/${specialtyId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Accept': 'application/json'
@@ -70,7 +70,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
           resolvedIdForFilter = String(specialtyResponse.data.especialidadId ?? specialtyId)
           setResolvedSpecialtyId(resolvedIdForFilter)
         } else {
-          const res = await axios.get(`${config.auth.baseUrl}/especialidades/agenda`, {
+          const res = await axios.get(`${config.api.authUrl}/especialidades/agenda`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Accept': 'application/json'
@@ -85,7 +85,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
         }
 
         // 2. Obtener todos los médicos con sus detalles
-        const allDoctorsResponse = await axios.get(`${config.auth.baseUrl}/medico/agenda2`, {
+        const allDoctorsResponse = await axios.get(`${config.api.authUrl}/medico/agenda2`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
@@ -106,7 +106,7 @@ export default function DoctorsPage({ params }: DoctorsPageProps) {
           const results = await Promise.allSettled(
             allDoctorsResponse.data.map(async (doctorId: number) => {
               try {
-                const doctorResponse = await axios.get(`${config.auth.baseUrl}/medico/agenda2/${doctorId}`, {
+                const doctorResponse = await axios.get(`${config.api.authUrl}/medico/agenda2/${doctorId}`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/json'

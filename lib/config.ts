@@ -1,39 +1,13 @@
-import packageJson from '../package.json';
-
-export const APPVERSION = packageJson.version;
-
+//importar package json para obtener la version
+import packageJson from '../package.json'
 // Configuración centralizada del proyecto
+export const APPVERSION = packageJson.version
 export const config = {
   // URLs de la API
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://10.129.180.147:3001',
-    authUrl: process.env.EXTERNAL_AUTH_URL || 'http://10.129.180.161:36560/api3/v1/Auth/login',
-    baseApiUrl: process.env.EXTERNAL_API_BASE_URL || 'http://10.129.180.161:36560/api3/v1',
+    authUrl: process.env.NEXT_PUBLIC_AUTH_URL || 'http://10.129.180.166:36560/api3/v1',
     timeout: 30000, // 30 segundos
-  },
-  
-  // Configuración de base de datos Oracle
-  database: {
-    mode: process.env.DB_MODE || 'thin',
-    user: process.env.DB_USER || 'hvq_usrpython',
-    password: process.env.DB_PASSWORD || 'pyth0n2022',
-    connectString: process.env.DB_CONNECT_STRING || '172.16.241.62:1521/SML',
-    poolMin: parseInt(process.env.DB_POOL_MIN || '2'),
-    poolMax: parseInt(process.env.DB_POOL_MAX || '10'),
-    poolIncrement: parseInt(process.env.DB_POOL_INCREMENT || '1'),
-    poolTimeout: parseInt(process.env.DB_POOL_TIMEOUT || '300'),
-    synchronize: process.env.DB_SYNCHRONIZE === 'true',
-    logging: process.env.DB_LOGGING === 'true',
-    oracleClientLibDir: process.env.ORACLE_CLIENT_LIB_DIR || 'C:\\oracle\\instantclient_23_9',
-    editorCustomSchema: process.env.EDITOR_CUSTOM_SCHEMA || 'EDITOR_CUSTOM',
-  },
-  
-  // Configuración de autenticación externa
-  auth: {
-    username: process.env.EXTERNAL_AUTH_USERNAME || 'middleware_dev',
-    password: process.env.EXTERNAL_AUTH_PASSWORD || 'DevMH@2025!',
-    url: process.env.EXTERNAL_AUTH_URL || 'http://10.129.180.161:36560/api3/v1/Auth/login',
-    baseUrl: process.env.EXTERNAL_API_BASE_URL || 'http://10.129.180.161:36560/api3/v1',
   },
   
   // URLs de imágenes
@@ -47,15 +21,15 @@ export const config = {
   
   // Configuración de caché
   cache: {
-    specialties: parseInt(process.env.CACHE_SPECIALTIES_TIMEOUT || '60000'), // 60 segundos
-    api: parseInt(process.env.CACHE_API_TIMEOUT || '30000'), // 30 segundos
+    specialties: 60000, // 60 segundos
+    api: 30000, // 30 segundos
   },
   
   // Configuración de la aplicación
   app: {
-    title: process.env.APP_TITLE || 'hvq-dir',
-    description: process.env.APP_DESCRIPTION || 'Directorio Edificio Bless',
-    idleTimeout: parseInt(process.env.APP_IDLE_TIMEOUT || '30000'), // 30 segundos
+    title: 'hvq-dir',
+    description: 'Directorio Edificio Bless',
+    idleTimeout: 30000, // 30 segundos
     version: APPVERSION,
   },
   
