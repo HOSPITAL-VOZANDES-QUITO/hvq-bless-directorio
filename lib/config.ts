@@ -9,8 +9,8 @@ export const APPVERSION = packageJson.version
 export const config = {
   // Configuración de URLs de la API
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://10.129.180.147:3001',
-    authUrl: process.env.NEXT_PUBLIC_AUTH_URL || 'http://10.129.180.166:36560/api3/v1',
+    baseUrl: process.env.NEXT_PUBLIC_API_URL,
+    authUrl: process.env.EXTERNAL_API_BASE_URL,
     timeout: 30000, // 30 segundos de timeout para peticiones
   },
   

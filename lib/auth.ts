@@ -9,9 +9,9 @@ let refreshToken = ''
 // Función para obtener credenciales desde variables de entorno
 // Usa valores por defecto si no están configuradas las variables
 const getCredentials = (): { username: string; password: string } => {
-  const username = process.env.NEXT_PUBLIC_AUTH_USERNAME || 'middleware_prod'
-  const password = process.env.NEXT_PUBLIC_AUTH_PASSWORD || 'MH@2025!Api'
-  
+  const username = process.env.EXTERNAL_AUTH_USERNAME 
+  const password = process.env.EXTERNAL_AUTH_PASSWORD
+
   if (!username || !password) {
     throw new Error('Credenciales de autenticación no configuradas')
   }
