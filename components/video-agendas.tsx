@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Volume2, VolumeX } from 'lucide-react'
 import { useInteractiveVideo } from "@/hooks/use-interactive-video"
-
+import { config } from "@/lib/config"
 /**
  * Props del componente VideoAgendas
  */
@@ -36,7 +36,7 @@ export function VideoAgendas({ consultorio, building, floor }: VideoAgendasProps
             <video
               ref={videoRef}
               className="absolute left-1/2 top-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none object-cover"
-              src="http://prd-hvq-desarrollos:8001/videos/video_cumbre.mp4"
+              src={config.videos.video_agendas}
               title="Video de agendas del hospital"
               autoPlay
               muted={isMuted}

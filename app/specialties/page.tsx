@@ -23,80 +23,42 @@ export default function SpecialtiesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // FUNCIÓN COMENTADA: Ya no necesaria porque la API externa ahora trae el piso directamente
-  /*
-  // Función para obtener la ubicación más común de una especialidad
-  const getEspecialidadLocation = async (especialidadId: number): Promise<string> => {
-    try {
-      const token = await getAccessToken()
-      // Obtener médicos de la especialidad
-      const doctorsResponse = await axios.get(`${config.api.authUrl}/medico/especialidad/${especialidadId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-        timeout: config.api.timeout
-      })
-
-      const doctors = Array.isArray(doctorsResponse.data) ? doctorsResponse.data : []
-      if (doctors.length === 0) return 'Sin agendas'
-
-      // Contador de ubicaciones
-      const locationCount: { [key: string]: number } = {}
-
-      // Obtener agendas de los primeros 3 médicos (para optimizar performance)
-      const doctorsToCheck = doctors.slice(0, 3)
-      
-      for (const doctor of doctorsToCheck) {
-        try {
-          const providerId = doctor.codigoPrestador ?? doctor.codigo_prestador ?? doctor.id
-          if (!providerId) continue
-
-          const agendasRes = await apiService.getAgendasDetalladasPorMedico(String(providerId))
-          if (agendasRes.success && Array.isArray(agendasRes.data)) {
-            agendasRes.data.forEach((agenda) => {
-              const piso = agenda.piso || agenda.pisoDescripcion
-              if (piso && typeof piso === 'string' && piso !== 'No especificado') {
-                locationCount[piso] = (locationCount[piso] || 0) + 1
-              }
-            })
-          }
-        } catch (err) {
-          // Continuar con el siguiente médico si hay error
-          continue
-        }
-      }
-
-      // Encontrar la ubicación más común
-      const locations = Object.entries(locationCount)
-      if (locations.length === 0) return 'Sin agendas'
-      
-      const mostCommonLocation = locations.reduce((prev, current) => 
-        current[1] > prev[1] ? current : prev
-      )[0]
-
-      return mostCommonLocation || 'Sin agendas'
-    } catch (err) {
-      return 'Sin agendas'
-    }
-  }
-  */
-
   useEffect(() => {
     const fetchSpecialties = async () => {
       try {
         // Cacheado simple en sessionStorage (v5: piso viene directo de API externa)
         const cacheKey = 'specialties_agenda_cache_v5'
         const cached = typeof window !== 'undefined' ? sessionStorage.getItem(cacheKey) : null
+        console.log('Caché encontrado:', cached ? 'Sí' : 'No')
+        
         if (cached) {
           const parsed = JSON.parse(cached)
-          if (parsed?.ts && Date.now() - parsed.ts < config.cache.specialties && Array.isArray(parsed.data)) {
+          const cacheAge = Date.now() - parsed.ts
+          console.log('Edad del caché:', cacheAge, 'ms')
+          console.log('Tiempo de caché válido:', config.cache.specialties, 'ms')
+          console.log('Datos del caché:', parsed.data)
+          
+          if (parsed?.ts && cacheAge < config.cache.specialties && Array.isArray(parsed.data)) {
+            console.log('Usando datos del caché')
             setSpecialties(parsed.data)
             return
           }
         }
 
+        console.log('Variables de entorno:', {
+          NEXT_PUBLIC_AUTH_URL: process.env.NEXT_PUBLIC_AUTH_URL,
+          EXTERNAL_AUTH_USERNAME: process.env.EXTERNAL_AUTH_USERNAME,
+          EXTERNAL_AUTH_PASSWORD: process.env.EXTERNAL_AUTH_PASSWORD ? 'Configurado' : 'No configurado'
+        })
+        console.log('Config API:', {
+          authUrl: config.api.authUrl,
+          baseUrl: config.api.baseUrl
+        })
+        
         const token = await getAccessToken()
+        console.log('Token obtenido:', token ? 'Sí' : 'No')
+        console.log('URL de API:', `${config.api.authUrl}/especialidades/agenda`)
+        
         const response = await axios.get(`${config.api.authUrl}/especialidades/agenda`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -105,10 +67,16 @@ export default function SpecialtiesPage() {
           timeout: config.api.timeout
         })
 
+        console.log('Respuesta de especialidades:', response.data)
+        console.log('Tipo de respuesta:', typeof response.data, Array.isArray(response.data))
+
         // Traer TODAS las especialidades válidas (ahora ya incluyen el piso), ordenadas alfabéticamente
         const finalList = (response.data as Especialidad[])
           .filter((esp: Especialidad) => Boolean(esp.descripcion))
           .sort((a: Especialidad, b: Especialidad) => (a.descripcion || '').localeCompare(b.descripcion || ''))
+        
+        console.log('Lista final de especialidades:', finalList)
+        console.log('Cantidad de especialidades:', finalList.length)
         
         // ¡Ya no necesitamos consultas adicionales! El piso viene directamente de la API externa
         setSpecialties(finalList)
@@ -117,7 +85,7 @@ export default function SpecialtiesPage() {
         }
       } catch (err) {
         // En producción, no deberíamos loggear errores de usuario
-        // console.error('Error fetching specialties:', err)
+        console.error('Error fetching specialties:', err)
         setError('Error al cargar las especialidades. Intente nuevamente más tarde.')
       } finally {
         setLoading(false)

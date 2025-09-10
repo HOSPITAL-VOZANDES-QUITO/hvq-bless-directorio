@@ -1,5 +1,5 @@
 import Image from "next/image"
-import { APPVERSION } from "@/lib/config"
+import { APPVERSION, config } from "@/lib/config"
 
 const version = APPVERSION
 
@@ -15,13 +15,15 @@ export function Footer() {
       <div className="text-left">v{version}</div>
       <div className="flex items-center gap-1 text-right">
         TICS | HOSPITAL VOZANDES QUITO
-        <Image
-          src="http://horizon-html:35480/public/img_directorio/aplicativo_logo.svg"
-          alt="Logo HTQ Pequeño"
-          width={20}
-          height={20}
-          className="ml-1"
-        />
+        {config.images.aplicativoLogo && (
+          <Image
+            src={config.images.aplicativoLogo}
+            alt="Logo HTQ Pequeño"
+            width={20}
+            height={20}
+            className="ml-1"
+          />
+        )}
       </div>
     </footer>
   )

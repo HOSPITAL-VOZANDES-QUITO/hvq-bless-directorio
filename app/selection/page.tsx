@@ -4,7 +4,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card"
 import "@/styles/pages.css"
 import { DirectorioLayout } from "@/components/directorio-layout"
 import { StethoscopeIcon, UserSearchIcon, FileTextIcon } from 'lucide-react'
-
+import { config } from "@/lib/config"
 // Página de selección de método de búsqueda
 export default function SelectionPage() {
   return (
@@ -62,7 +62,7 @@ export default function SelectionPage() {
                 objectFit: 'contain'
               }}
             >
-              <source src="http://horizon-html:35480/public/img_directorio/QR_Bless_Animado.mp4" type="video/mp4" />
+              <source src={config.videos.logo_animado} type="video/mp4" />
               Tu navegador no soporta el elemento de video.
             </video>
           </div>

@@ -10,17 +10,24 @@ export const config = {
   // Configuración de URLs de la API
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL,
-    authUrl: process.env.EXTERNAL_API_BASE_URL,
+    authUrl: process.env.NEXT_PUBLIC_AUTH_URL,
     timeout: 30000, // 30 segundos de timeout para peticiones
   },
   
   // URLs de imágenes utilizadas en la aplicación
   images: {
-    logo: process.env.NEXT_PUBLIC_LOGO_URL || 'http://horizon-html:35480/public/img_directorio/logo.svg',
-    aplicativoLogo: process.env.NEXT_PUBLIC_APLICATIVO_LOGO_URL || 'http://horizon-html:35480/public/img_directorio/aplicativo_logo.svg',
-    homeline: process.env.NEXT_PUBLIC_HOMELINE_URL || 'http://prd-hvq-desarrollos:8001/media/inicio_dir.jpg',
-    banner: process.env.NEXT_PUBLIC_BANNER_URL || 'http://horizon-html:35480/public/img_directorio/banner.png',
-    hvqLogo: process.env.NEXT_PUBLIC_HVQ_LOGO_URL || '/images/hvq_2025_1.png',
+    logo: process.env.NEXT_PUBLIC_LOGO_URL,
+    aplicativoLogo: process.env.NEXT_PUBLIC_APLICATIVO_LOGO_URL,
+    homeline: process.env.NEXT_PUBLIC_HOMELINE_URL,
+    banner: process.env.NEXT_PUBLIC_BANNER_URL,
+    banner2: process.env.NEXT_PUBLIC_BANNER2_URL,
+    banner3: process.env.NEXT_PUBLIC_BANNER3_URL,
+    hvqLogo: process.env.NEXT_PUBLIC_HVQ_LOGO_URL
+  },
+
+  videos: {
+    video_agendas: process.env.NEXT_PUBLIC_HVQ_VIDEO_CUMBRE_URL,
+    logo_animado: process.env.NEXT_PUBLIC_HVQ_LOGO_ANIMADO_URL
   },
   
   // Configuración de caché para optimizar rendimiento
