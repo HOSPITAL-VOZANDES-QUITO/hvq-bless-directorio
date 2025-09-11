@@ -29,37 +29,20 @@ export default function SpecialtiesPage() {
         // Cacheado simple en sessionStorage (v5: piso viene directo de API externa)
         const cacheKey = 'specialties_agenda_cache_v5'
         const cached = typeof window !== 'undefined' ? sessionStorage.getItem(cacheKey) : null
-        console.log('Caché encontrado:', cached ? 'Sí' : 'No')
         
         if (cached) {
           const parsed = JSON.parse(cached)
           const cacheAge = Date.now() - parsed.ts
-          console.log('Edad del caché:', cacheAge, 'ms')
-          console.log('Tiempo de caché válido:', config.cache.specialties, 'ms')
-          console.log('Datos del caché:', parsed.data)
           
           if (parsed?.ts && cacheAge < config.cache.specialties && Array.isArray(parsed.data)) {
-            console.log('Usando datos del caché')
             setSpecialties(parsed.data)
             return
           }
         }
-
-        console.log('Variables de entorno:', {
-          NEXT_PUBLIC_AUTH_URL: process.env.NEXT_PUBLIC_AUTH_URL,
-          EXTERNAL_AUTH_USERNAME: process.env.EXTERNAL_AUTH_USERNAME,
-          EXTERNAL_AUTH_PASSWORD: process.env.EXTERNAL_AUTH_PASSWORD ? 'Configurado' : 'No configurado'
-        })
-        console.log('Config API:', {
-          authUrl: config.api.authUrl,
-          baseUrl: config.api.baseUrl
-        })
         
         const token = await getAccessToken()
-        console.log('Token obtenido:', token ? 'Sí' : 'No')
-        console.log('URL de API:', `${config.api.authUrl}/especialidades/agenda`)
         
-        const response = await axios.get(`${config.api.authUrl}/especialidades/agenda`, {
+        const response = await axios.get(`${config.api.baseUrl}/especialidades/agenda`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
@@ -67,16 +50,10 @@ export default function SpecialtiesPage() {
           timeout: config.api.timeout
         })
 
-        console.log('Respuesta de especialidades:', response.data)
-        console.log('Tipo de respuesta:', typeof response.data, Array.isArray(response.data))
-
         // Traer TODAS las especialidades válidas (ahora ya incluyen el piso), ordenadas alfabéticamente
         const finalList = (response.data as Especialidad[])
           .filter((esp: Especialidad) => Boolean(esp.descripcion))
           .sort((a: Especialidad, b: Especialidad) => (a.descripcion || '').localeCompare(b.descripcion || ''))
-        
-        console.log('Lista final de especialidades:', finalList)
-        console.log('Cantidad de especialidades:', finalList.length)
         
         // ¡Ya no necesitamos consultas adicionales! El piso viene directamente de la API externa
         setSpecialties(finalList)
@@ -84,8 +61,6 @@ export default function SpecialtiesPage() {
           sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: finalList }))
         }
       } catch (err) {
-        // En producción, no deberíamos loggear errores de usuario
-        console.error('Error fetching specialties:', err)
         setError('Error al cargar las especialidades. Intente nuevamente más tarde.')
       } finally {
         setLoading(false)
@@ -165,6 +140,7 @@ export default function SpecialtiesPage() {
                     <Link
                       href={`/specialties/${specialty.especialidadId}`}
                       passHref
+                      onClick={() => setIsKeyboardOpen(false)}
                     >
                       <Card className="specialties-card group">
                         <CardContent className="specialties-card-content">
@@ -185,7 +161,7 @@ export default function SpecialtiesPage() {
                             </div>
                           )}
                           <CardTitle className="specialties-card-title">
-                            {specialty.descripcion || 'Especialidad sin nombre'}
+                            {specialty.descripcion}
                           </CardTitle>
                           {specialty.piso && (
                             <p className="font-semibold" style={{ fontFamily: "Arial, sans-serif", fontSize: '1rem', fontWeight: 'bold' }}>

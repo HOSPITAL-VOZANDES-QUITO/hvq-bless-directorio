@@ -31,10 +31,12 @@ interface DoctorCardProps {
   variant?: 'default' | 'compact'
   /** Parámetros de consulta para los enlaces */
   queryParams?: Record<string, string>
+  /** Callback que se ejecuta al hacer clic en la tarjeta */
+  onCardClick?: () => void
 }
 
 // Componente para mostrar la tarjeta de un médico con optimización de imágenes
-export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, basePath, className, variant = 'default', queryParams }: DoctorCardProps) {
+export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, basePath, className, variant = 'default', queryParams, onCardClick }: DoctorCardProps) {
   // Estados para manejar la carga y errores de imagen
   const [hasImageError, setHasImageError] = useState(false)
   const [isImageLoading, setIsImageLoading] = useState(Boolean(doctor.photo))
@@ -116,6 +118,7 @@ export const DoctorCard = memo(function DoctorCard({ doctor, specialtyName, base
       key={doctor.id} 
       href={`${basePath}/${doctor.id}${queryParams ? `?${new URLSearchParams(queryParams).toString()}` : ''}`} 
       passHref
+      onClick={onCardClick}
     >
       <Card 
         className={`bg-secondary text-accent2 hover:bg-primary hover:text-primary-foreground 

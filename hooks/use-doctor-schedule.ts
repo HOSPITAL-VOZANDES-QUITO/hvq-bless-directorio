@@ -1,9 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from "react"
-import axios from "axios"
-import { getAccessToken } from "@/lib/auth"
-import { apiService } from "@/lib/api-service"
-import { config } from "@/lib/config"
-import { extractHHmm, formatHHmmTo12h } from "@/lib/utils"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useDataNormalization } from "./use-data-normalization"
+import { useDoctorData } from "./use-doctor-data"
+import { useDoctorScheduleUI } from "./use-doctor-schedule-ui"
 
 /**
  * Interfaz para horarios de médicos
@@ -30,397 +28,176 @@ interface DoctorInfo {
 }
 
 /**
- * Estado del hook de horarios de médico
- */
-interface UseDoctorScheduleState {
-  /** Información del médico */
-  doctorInfo: DoctorInfo | null
-  /** Horarios del médico organizados por día */
-  doctorSchedules: Record<string, DoctorSchedule[]> | null
-  /** Día seleccionado */
-  selectedDay: string | null
-  /** Tipo de consulta seleccionado */
-  selectedKind: 'consulta' | 'procedimiento' | null
-  /** Estado de carga */
-  loading: boolean
-  /** Error si existe */
-  error: string | null
-  /** Origen de la navegación */
-  source: string | null
-}
-
-/**
- * Hook personalizado para gestionar la lógica de negocio de horarios de médicos
- * Separa la lógica compleja de resolución, construcción de horarios y auto-selección
+ * Hook principal para gestionar horarios de médicos
+ * Orquesta hooks especializados para separar responsabilidades
  */
 export function useDoctorSchedule(doctorSlug: string, specialtySlug: string) {
-  const [state, setState] = useState<UseDoctorScheduleState>({
-    doctorInfo: null,
-    doctorSchedules: null,
-    selectedDay: null,
-    selectedKind: null,
-    loading: true,
-    error: null,
-    source: null
+  // Estado separado en múltiples useState para evitar re-renders innecesarios
+  const [doctorInfo, setDoctorInfo] = useState<DoctorInfo | null>(null)
+  const [doctorSchedules, setDoctorSchedules] = useState<Record<string, DoctorSchedule[]> | null>(null)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [selectedKind, setSelectedKind] = useState<'consulta' | 'procedimiento' | null>(null)
+  const [source, setSource] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState(false)
+
+  // Estados de carga granulares para mejor UX
+  const [loadingStates, setLoadingStates] = useState({
+    specialty: false,
+    doctor: false,
+    schedules: false,
+    overall: true
+  })
+
+  // Errores específicos por operación
+  const [errors, setErrors] = useState({
+    specialty: null as string | null,
+    doctor: null as string | null,
+    schedules: null as string | null,
+    general: null as string | null
   })
 
   const detailsRef = useRef<HTMLDivElement | null>(null)
-  const [photoError, setPhotoError] = useState(false)
 
-  const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-  const dayNames: { [key: string]: string } = {
-    monday: "Lunes",
-    tuesday: "Martes",
-    wednesday: "Miércoles",
-    thursday: "Jueves",
-    friday: "Viernes",
-    saturday: "Sábado",
-    sunday: "Domingo",
-  }
+  // Funciones helper para manejar estados de carga granulares
+  const updateLoadingState = useCallback((updates: Partial<typeof loadingStates>) => {
+    setLoadingStates(prev => ({ ...prev, ...updates }))
+  }, [])
 
-  /**
-   * Normaliza textos a slug: minúsculas, sin acentos, sólo [a-z0-9-]
-   */
-  const slugify = (input: string): string => {
-    return String(input || "")
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-  }
+  const updateError = useCallback((operation: keyof typeof errors, error: string | null) => {
+    setErrors(prev => ({ ...prev, [operation]: error }))
+  }, [])
 
-  /**
-   * Determina si un tipo es procedimiento
-   */
-  const isProcedure = (tipo?: string) => {
-    const t = (tipo || '').toLowerCase()
-    return /(proced|qx|quir|cirug)/.test(t)
-  }
-
-  /**
-   * Determina si un tipo es consulta
-   */
-  const isConsulta = (tipo?: string) => !isProcedure(tipo)
-
-  /**
-   * Normaliza nombres de días a claves estándar
-   */
-  const normalizeDayKey = (nameOrKey: string) => {
-    const key = (nameOrKey || '').toLowerCase()
-    const map: Record<string, string> = {
-      lunes: 'monday',
-      martes: 'tuesday',
-      miércoles: 'wednesday',
-      miercoles: 'wednesday',
-      jueves: 'thursday',
-      viernes: 'friday',
-      sábado: 'saturday',
-      sabado: 'saturday',
-      domingo: 'sunday',
-    }
-    return map[key] || key
-  }
-
-  /**
-   * Resuelve la especialidad por ID o por slug
-   */
-  const resolveSpecialty = async (token: string, specialtySlug: string) => {
-    const isSpecialtyId = /^\d+$/.test(specialtySlug)
-    let foundSpecialty: any
-    
-    if (isSpecialtyId) {
-      const res = await axios.get(`${config.api.authUrl}/especialidades/${specialtySlug}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      foundSpecialty = res.data
-    } else {
-      const res = await axios.get(`${config.api.authUrl}/especialidades/agenda`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const list = Array.isArray(res.data) ? res.data : []
-      foundSpecialty = list.find((spec: any) => 
-        slugify(String(spec.descripcion || '')) === slugify(String(specialtySlug))
-      )
-    }
-
-    if (!foundSpecialty) {
-      throw new Error('Especialidad no encontrada')
-    }
-
-    return foundSpecialty
-  }
-
-  /**
-   * Resuelve el médico por ID o por slug
-   */
-  const resolveDoctor = async (token: string, doctorSlug: string, foundSpecialty: any) => {
-    const isDoctorId = /^\d+$/.test(doctorSlug)
-    let doctorData: any
-    let doctorIdToUse: number
-    
-    if (isDoctorId) {
-      const res = await axios.get(`${config.api.authUrl}/medico/agenda/${doctorSlug}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      doctorData = res.data
-      doctorIdToUse = doctorData.id
-    } else {
-      const res = await axios.get(`${config.api.authUrl}/medico/especialidad/${foundSpecialty.especialidadId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const list = Array.isArray(res.data) ? res.data : []
-      const foundDoctor = list.find((doc: any) => 
-        slugify(String(doc.nombres || '')) === slugify(String(doctorSlug))
-      )
-      
-      if (!foundDoctor) {
-        throw new Error('Médico no encontrado')
-      }
-      
-      const detail = await axios.get(`${config.api.authUrl}/medico/agenda/${foundDoctor.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      doctorData = detail.data
-      doctorIdToUse = foundDoctor.id
-    }
-
-    return { doctorData, doctorIdToUse }
-  }
-
-  /**
-   * Construye los horarios del médico desde los datos detallados
-   */
-  const buildSchedules = async (doctorData: any, doctorIdToUse: number, foundSpecialty: any) => {
-    const providerId = doctorData.codigoPrestador ?? doctorData.codigo_prestador ?? doctorIdToUse
-    const urlParams = new URLSearchParams(window.location.search)
-    const fromSource = urlParams.get('source')
-    const passSpecialtyId = fromSource === 'specialty'
-    
-    setState(prev => ({ ...prev, source: fromSource }))
-    
-    const detalladasRes = passSpecialtyId 
-      ? await apiService.getAgendasDetalladasPorMedico(String(providerId), foundSpecialty.especialidadId)
-      : await apiService.getAgendasDetalladasPorMedico(String(providerId))
-    
-    const detalladas = Array.isArray(detalladasRes.data)
-      ? (detalladasRes.data as any[])
-      : []
-
-    const formattedSchedules: Record<string, DoctorSchedule[]> = {}
-    
-    detalladas.forEach((item: any) => {
-      const dayKey = normalizeDayKey(String(item.diaNombre || ''))
-      if (!daysOfWeek.includes(dayKey)) return
-      
-      const rawInicio = (item.horaInicioHHmm ?? item.hora_inicio ?? item.horaInicio ?? item.hora) as unknown
-      const rawFin = (item.horaFinHHmm ?? item.hora_fin ?? item.horaFin ?? item.horarioFin) as unknown
-      const inicio = formatHHmmTo12h(extractHHmm(rawInicio))
-      const fin = formatHHmmTo12h(extractHHmm(rawFin))
-      const time = fin ? `${inicio} - ${fin}` : inicio
-
-      const entry: DoctorSchedule = {
-        time,
-        room: item.consultorioDescripcion || 'No especificado',
-        building: item.edificioDescripcion || (item as any).buildingCode || 'No especificado',
-        floor: item.piso || (item as any).pisoDescripcion || (item as any).des_piso || 'No especificado',
-        tipo: item.tipoTexto || undefined,
-        specialtyLabel: (item as any).especialidad || undefined,
-      }
-      
-      if (!formattedSchedules[dayKey]) formattedSchedules[dayKey] = []
-      formattedSchedules[dayKey].push(entry)
+  const clearAllErrors = useCallback(() => {
+    setErrors({
+      specialty: null,
+      doctor: null,
+      schedules: null,
+      general: null
     })
+  }, [])
 
-    return formattedSchedules
-  }
-
-  /**
-   * Auto-selecciona el día y tipo basado en disponibilidad
-   */
-  const autoSelectDayAndType = (formattedSchedules: Record<string, DoctorSchedule[]>) => {
-    const availableDays = Object.keys(formattedSchedules).filter((d) => daysOfWeek.includes(d))
-    
-    // Obtener el día actual
-    const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' }).toLowerCase()
-    const todayKey = normalizeDayKey(today)
-    
-    let dayToSelect: string | null = null
-    
-    // Prioridad 1: Si el día actual está disponible, seleccionarlo
-    if (availableDays.includes(todayKey)) {
-      dayToSelect = todayKey
-    }
-    // Prioridad 2: Si solo hay un día disponible, seleccionarlo
-    else if (availableDays.length === 1) {
-      dayToSelect = availableDays[0]
-    }
-    
-    if (dayToSelect) {
-      setState(prev => ({ ...prev, selectedDay: dayToSelect }))
-      
-      // Determinar el tipo automáticamente si solo hay un tipo en ese día
-      const daySchedules = formattedSchedules[dayToSelect]
-      const hasConsulta = daySchedules.some(sched => isConsulta(sched.tipo))
-      const hasProcedimiento = daySchedules.some(sched => isProcedure(sched.tipo))
-      
-      if (hasConsulta && !hasProcedimiento) {
-        setState(prev => ({ ...prev, selectedKind: 'consulta' }))
-      } else if (hasProcedimiento && !hasConsulta) {
-        setState(prev => ({ ...prev, selectedKind: 'procedimiento' }))
-      }
-      // Si tiene ambos tipos, no establecer selectedKind para mostrar todos
-    }
-  }
+  // Hooks especializados
+  const { daysOfWeek, dayNames, slugify, normalizeDayKey, isProcedure, isConsulta, getBuildingDisplayName } = useDataNormalization()
+  const { loadDoctorData } = useDoctorData()
+  const { consultaDays, procedimientoDays, availableDays, isDaySelected, autoSelectDayAndType } = useDoctorScheduleUI(
+    doctorSchedules,
+    selectedDay,
+    selectedKind,
+    daysOfWeek,
+    isConsulta,
+    isProcedure,
+    normalizeDayKey
+  )
 
   /**
-   * Carga todos los datos del médico y sus horarios
+   * Carga todos los datos del médico y sus horarios con estados granulares
    */
-  const loadData = async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }))
+      // Iniciar carga general
+      updateLoadingState({ overall: true })
+      clearAllErrors()
       
-      const token = await getAccessToken()
+      const { doctorInfo, formattedSchedules } = await loadDoctorData(
+        doctorSlug,
+        specialtySlug,
+        slugify,
+        normalizeDayKey,
+        daysOfWeek,
+        setSource,
+        signal,
+        updateLoadingState,
+        updateError
+      )
 
-      // 1. Resolver especialidad
-      const foundSpecialty = await resolveSpecialty(token, specialtySlug)
+      // Verificar si el componente sigue montado antes de actualizar estado
+      if (!signal?.aborted) {
+        // Auto-seleccionar día y tipo
+        autoSelectDayAndType(formattedSchedules, setSelectedDay, setSelectedKind)
 
-      // 2. Resolver médico
-      const { doctorData, doctorIdToUse } = await resolveDoctor(token, doctorSlug, foundSpecialty)
-
-      // 3. Construir información del médico
-      let especialidades: Array<{id: string, label: string}> = []
-      
-      if (Array.isArray(doctorData.especialidades) && doctorData.especialidades.length > 0) {
-        especialidades = doctorData.especialidades.map((esp: any) => {
-          if (esp && typeof esp === "object") {
-            const espId = String((esp as any).especialidadId ?? (esp as any).id ?? (esp as any).codigo ?? "")
-            const espLabel = String((esp as any).descripcion ?? (esp as any).nombre ?? espId)
-            return { id: espId, label: espLabel }
-          } else {
-            const espStr = String(esp)
-            return { id: espStr, label: espStr }
-          }
-        }).filter((esp: any) => esp.id.trim().length > 0)
-      } else {
-        // Fallback para médicos con especialidad individual
-        const singleSpecialtyId = String(foundSpecialty.especialidadId ?? foundSpecialty.especialidad ?? "")
-        const singleSpecialtyLabel = String(foundSpecialty.descripcion ?? foundSpecialty.nombre ?? singleSpecialtyId)
-        if (singleSpecialtyId.trim().length > 0) {
-          especialidades = [{ id: singleSpecialtyId, label: singleSpecialtyLabel }]
-        }
+        setDoctorInfo(doctorInfo)
+        setDoctorSchedules(formattedSchedules)
+        updateLoadingState({ overall: false })
       }
-
-      const doctorInfo: DoctorInfo = {
-        id: doctorData.id,
-        name: doctorData.nombres || 'Nombre no disponible',
-        specialty: foundSpecialty.descripcion || 'Especialidad no disponible',
-        specialtyId: foundSpecialty.especialidadId,
-        especialidades: especialidades,
-        photo: doctorData.retrato
-      }
-
-      // 4. Construir horarios
-      const formattedSchedules = await buildSchedules(doctorData, doctorIdToUse, foundSpecialty)
-
-      // 5. Auto-seleccionar día y tipo
-      autoSelectDayAndType(formattedSchedules)
-
-      setState(prev => ({
-        ...prev,
-        doctorInfo,
-        doctorSchedules: formattedSchedules,
-        loading: false,
-        error: null
-      }))
     } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err.message : 'Error desconocido',
-        loading: false
-      }))
+      // Solo actualizar estado si no es un error de cancelación y el componente sigue montado
+      if (!signal?.aborted && err instanceof Error && err.name !== 'AbortError') {
+        updateError('general', err.message)
+        updateLoadingState({ overall: false })
+      } else if (!signal?.aborted) {
+        updateError('general', 'Error desconocido')
+        updateLoadingState({ overall: false })
+      }
     }
-  }
-
-  /**
-   * Días disponibles para consulta
-   */
-  const consultaDays = useMemo(() => {
-    return daysOfWeek.filter((day) => {
-      const list = (state.doctorSchedules || {})[day]
-      if (!list || list.length === 0) return false
-      return list.some((s) => isConsulta(s.tipo))
-    })
-  }, [state.doctorSchedules])
-
-  /**
-   * Días disponibles para procedimiento
-   */
-  const procedimientoDays = useMemo(() => {
-    return daysOfWeek.filter((day) => {
-      const list = (state.doctorSchedules || {})[day]
-      if (!list || list.length === 0) return false
-      return list.some((s) => isProcedure(s.tipo))
-    })
-  }, [state.doctorSchedules])
-
-  /**
-   * Días disponibles en general
-   */
-  const availableDays = useMemo(() => {
-    return Object.keys(state.doctorSchedules || {}).filter((d) => daysOfWeek.includes(d))
-  }, [state.doctorSchedules])
-
-  /**
-   * Determina si un día debe estar seleccionado visualmente
-   */
-  const isDaySelected = (day: string, kind: 'consulta' | 'procedimiento') => {
-    if (state.selectedDay !== day) return false
-    if (!state.selectedKind) return false
-    return state.selectedKind === kind
-  }
-
-  /**
-   * Valida y muestra el nombre del edificio según el código
-   */
-  const getBuildingDisplayName = (buildingCode: string | number | undefined): string => {
-    if (!buildingCode) return 'No especificado'
-    
-    const code = String(buildingCode).trim()
-    
-    // Validación específica para códigos 1 y 2
-    if (code === '1') return 'Principal'
-    if (code === '2') return 'Torre Bless'
-    
-    // Para otros códigos, mantener la lógica actual
-    return code
-  }
+  }, [doctorSlug, specialtySlug, slugify, normalizeDayKey, daysOfWeek, loadDoctorData, autoSelectDayAndType, updateLoadingState, updateError, clearAllErrors])
 
   // Cargar datos cuando cambian los parámetros
   useEffect(() => {
     if (doctorSlug && specialtySlug) {
-      loadData()
+      // Crear AbortController para cancelar requests pendientes
+      const abortController = new AbortController()
+      let isMounted = true
+      
+      const loadDataSafely = async () => {
+        try {
+          await loadData(abortController.signal)
+        } catch (error) {
+          // Solo manejar errores si el componente sigue montado
+          if (isMounted && !abortController.signal.aborted) {
+            console.error('Error loading doctor data:', error)
+          }
+        }
+      }
+      
+      loadDataSafely()
+      
+      // Cleanup: cancelar requests y marcar como desmontado
+      return () => {
+        isMounted = false
+        abortController.abort()
+      }
     }
-  }, [doctorSlug, specialtySlug])
+  }, [doctorSlug, specialtySlug, loadData])
 
   // Limpiar selección si el día seleccionado ya no está disponible
   useEffect(() => {
-    if (state.selectedDay && !availableDays.includes(state.selectedDay)) {
-      setState(prev => ({ ...prev, selectedDay: null }))
+    if (selectedDay && !availableDays.includes(selectedDay)) {
+      setSelectedDay(null)
     }
-  }, [state.selectedDay, availableDays])
+  }, [selectedDay, availableDays])
 
   // Scroll automático cuando se selecciona un día
   useEffect(() => {
-    if (state.selectedDay && state.doctorSchedules?.[state.selectedDay]) {
+    if (selectedDay && doctorSchedules?.[selectedDay]) {
       detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
-  }, [state.selectedDay, state.doctorSchedules])
+  }, [selectedDay, doctorSchedules])
+
+  // Calcular progreso total
+  const progress = useMemo(() => {
+    const steps = [loadingStates.specialty, loadingStates.doctor, loadingStates.schedules]
+    const completedSteps = steps.filter(Boolean).length
+    return Math.round((completedSteps / 3) * 100)
+  }, [loadingStates])
+
+  // Estado de carga general (para compatibilidad)
+  const loading = loadingStates.overall
+  const error = errors.general
 
   return {
-    // Estados
-    ...state,
+    // Estados separados
+    doctorInfo,
+    doctorSchedules,
+    selectedDay,
+    selectedKind,
+    source,
+    // Estados de carga granulares
+    loadingStates,
+    errors,
+    progress,
+    // Estados de compatibilidad
+    loading,
+    error,
     // Referencias
     detailsRef,
     photoError,
@@ -436,8 +213,8 @@ export function useDoctorSchedule(doctorSlug: string, specialtySlug: string) {
     isProcedure,
     isConsulta,
     // Acciones
-    setSelectedDay: (day: string | null) => setState(prev => ({ ...prev, selectedDay: day })),
-    setSelectedKind: (kind: 'consulta' | 'procedimiento' | null) => setState(prev => ({ ...prev, selectedKind: kind })),
-    reload: loadData
+    setSelectedDay,
+    setSelectedKind,
+    reload: () => loadData()
   }
 }

@@ -390,7 +390,7 @@ export default function SchedulePage() {
                         <div className="flex items-center gap-2">
                           <MapPinIcon className="doctor-schedule-details-icon h-5 w-5 text-[#7F0C43]" />
                           <span className="doctor-schedule-details-label font-medium">Ubicación:</span>
-                          <span className="text-2xl">{sched.floor || 'No especificado'}</span>
+                          <span className="text-2xl">{sched.floor}</span>
                         </div>
       
                       </div>

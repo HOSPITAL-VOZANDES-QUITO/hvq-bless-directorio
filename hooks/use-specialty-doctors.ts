@@ -56,7 +56,7 @@ export function useSpecialtyDoctors(specialtyId: string) {
    * Normaliza textos a slug: minúsculas, sin acentos, sólo [a-z0-9-]
    */
   const slugify = (input: string): string => {
-    return String(input || "")
+    return String(input)
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
@@ -73,7 +73,7 @@ export function useSpecialtyDoctors(specialtyId: string) {
     
     if (isId) {
       // Es un ID numérico, obtener directamente
-      const specialtyResponse = await axios.get(`${config.api.authUrl}/especialidades/${specialtyId}`, {
+      const specialtyResponse = await axios.get(`${config.api.baseUrl}/especialidades/${specialtyId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
@@ -90,7 +90,7 @@ export function useSpecialtyDoctors(specialtyId: string) {
       }
     } else {
       // Es un slug, buscar en la lista de especialidades
-      const res = await axios.get(`${config.api.authUrl}/especialidades/agenda`, {
+      const res = await axios.get(`${config.api.baseUrl}/especialidades/agenda`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
@@ -99,7 +99,7 @@ export function useSpecialtyDoctors(specialtyId: string) {
       
       const list = Array.isArray(res.data) ? res.data : []
       const match = list.find((spec: any) => 
-        slugify(String(spec.descripcion || '')) === slugify(String(specialtyId))
+        slugify(String(spec.descripcion)) === slugify(String(specialtyId))
       )
       
       if (!match) {
@@ -118,7 +118,7 @@ export function useSpecialtyDoctors(specialtyId: string) {
    */
   const loadDoctorsBySpecialty = async (token: string, resolvedSpecialtyId: string) => {
     // Obtener todos los médicos con sus detalles
-    const allDoctorsResponse = await axios.get(`${config.api.authUrl}/medico/agenda2`, {
+    const allDoctorsResponse = await axios.get(`${config.api.baseUrl}/medico/agenda`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
@@ -139,7 +139,7 @@ export function useSpecialtyDoctors(specialtyId: string) {
       const results = await Promise.allSettled(
         allDoctorsResponse.data.map(async (doctorId: number) => {
           try {
-            const doctorResponse = await axios.get(`${config.api.authUrl}/medico/agenda2/${doctorId}`, {
+            const doctorResponse = await axios.get(`${config.api.baseUrl}/medico/agenda/${doctorId}`, {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Accept': 'application/json'

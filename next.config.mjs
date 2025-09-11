@@ -10,7 +10,7 @@ const nextConfig = {
     unoptimized: true,
   },
   async rewrites() {
-    const base = process.env.NEXT_PUBLIC_API_URL || 'http://10.129.180.147:3001'
+    const base = process.env.BASE_URL
     return [
       {
         source: '/api/:path*',

@@ -12,6 +12,7 @@ import type {
 // Configuración para conectar con el backend real
 const API_CONFIG = {
   BASE_URL: config.api.baseUrl,
+  AGENDA_BASE_URL: config.api.agendaBaseUrl,
   TIMEOUT: config.api.timeout,
   DEFAULT_HEADERS: config.headers
 }
@@ -19,17 +20,20 @@ const API_CONFIG = {
 // Clase principal para manejar todas las comunicaciones con la API
 class ApiService {
   private baseURL: string
+  private agendaBaseURL: string
   private inMemoryCache: Map<string, { ts: number; data: any }>
 
   constructor() {
-    this.baseURL = API_CONFIG.BASE_URL
+    this.baseURL = API_CONFIG.BASE_URL || ''
+    this.agendaBaseURL = API_CONFIG.AGENDA_BASE_URL || ''
     this.inMemoryCache = new Map()
   }
 
   // Método principal para realizar peticiones HTTP al backend
   // Maneja caché, timeouts, cancelación y errores de forma centralizada
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`
+  private async request<T>(endpoint: string, options: RequestInit = {}, useAgendaBase: boolean = false): Promise<ApiResponse<T>> {
+    const baseUrl = useAgendaBase ? this.agendaBaseURL : this.baseURL
+    const url = `${baseUrl}${endpoint}`
     const config: RequestInit = {
       headers: {
         ...API_CONFIG.DEFAULT_HEADERS,
@@ -41,7 +45,7 @@ class ApiService {
     try {
       // Verificar caché para peticiones GET (válido por 30 segundos)
       const isGet = !config.method || config.method.toUpperCase() === 'GET'
-      const cacheKey = `${config.method || 'GET'}:${url}`
+      const cacheKey = `${config.method}:${url}`
       if (isGet) {
         const cached = this.inMemoryCache.get(cacheKey)
         if (cached && Date.now() - cached.ts < 30000) {
@@ -139,56 +143,56 @@ class ApiService {
   
   // Obtiene la lista completa de médicos
   async getDoctores(options?: { signal?: AbortSignal }): Promise<ApiResponse<Doctor[]>> {
-    return this.request<Doctor[]>('/api/medicos', { signal: options?.signal })
+    return this.request<Doctor[]>('/api/medicos', { signal: options?.signal }, true)
   }
 
   // Obtiene la lista de especialidades disponibles para agendamiento
   async getEspecialidadesAgenda(): Promise<ApiResponse<string[]>> {
-    return this.request<string[]>('/api/medicos/especialidades')
+    return this.request<string[]>('/api/medicos/especialidades', {}, true)
   }
 
   // Obtiene médicos filtrados por especialidad específica
   async getDoctoresPorEspecialidad(especialidadId: string | number): Promise<ApiResponse<Doctor[]>> {
-    return this.request<Doctor[]>(`/api/medicos/especialidad/${encodeURIComponent(especialidadId)}`)
+    return this.request<Doctor[]>(`/api/medicos/especialidad/${encodeURIComponent(especialidadId)}`, {}, true)
   }
 
   // Obtiene un médico específico por su ID
   async getDoctorById(id: string | number): Promise<ApiResponse<Doctor>> {
-    return this.request<Doctor>(`/api/medicos/item/${encodeURIComponent(id)}`)
+    return this.request<Doctor>(`/api/medicos/item/${encodeURIComponent(id)}`, {}, true)
   }
 
   // Busca médicos por nombre
   async getDoctorByName(nombre: string): Promise<ApiResponse<Doctor[]>> {
-    return this.request<Doctor[]>(`/api/medicos/nombre/${encodeURIComponent(nombre)}`)
+    return this.request<Doctor[]>(`/api/medicos/nombre/${encodeURIComponent(nombre)}`, {}, true)
   }
 
   // Obtiene estadísticas de médicos
   async getDoctorStats(): Promise<ApiResponse<unknown>> {
-    return this.request<unknown>('/api/medicos/estadisticas')
+    return this.request<unknown>('/api/medicos/estadisticas', {}, true)
   }
 
   // ===== ENDPOINTS DE AGENDAS =====
   
   // Obtiene todas las agendas disponibles
   async getAgendas(): Promise<ApiResponse<Agenda[]>> {
-    return this.request<Agenda[]>('/api/agnd-agenda')
+    return this.request<Agenda[]>('/api/agnd-agenda', {}, true)
   }
 
   // Obtiene una agenda específica por ID
   async getAgendaById(id: number): Promise<ApiResponse<Agenda>> {
-    return this.request<Agenda>(`/api/agnd-agenda/${id}`)
+    return this.request<Agenda>(`/api/agnd-agenda/${id}`, {}, true)
   }
 
   // Obtiene agendas de un médico específico usando diferentes parámetros para compatibilidad
   async getAgendasPorMedico(codigoPrestador: string): Promise<ApiResponse<Agenda[]>> {
     // Intentar con ambos nombres de parámetro para máxima compatibilidad
-    const first = await this.request<Agenda[]>(`/api/agnd-agenda?codigo_prestador=${encodeURIComponent(codigoPrestador)}`)
+    const first = await this.request<Agenda[]>(`/api/agnd-agenda?codigo_prestador=${encodeURIComponent(codigoPrestador)}`, {}, true)
     const listFirst: Record<string, unknown>[] = Array.isArray(first.data)
       ? (first.data as Record<string, unknown>[]) 
       : (Array.isArray((first.data as any)?.data) ? ((first.data as any).data as Record<string, unknown>[]) : [])
     if (first.success && listFirst.length > 0) return first
 
-    const second = await this.request<Agenda[]>(`/api/agnd-agenda?cd_prestador=${encodeURIComponent(codigoPrestador)}`)
+    const second = await this.request<Agenda[]>(`/api/agnd-agenda?cd_prestador=${encodeURIComponent(codigoPrestador)}`, {}, true)
     const listSecond: Record<string, unknown>[] = Array.isArray(second.data)
       ? (second.data as Record<string, unknown>[])
       : (Array.isArray((second.data as any)?.data) ? ((second.data as any).data as Record<string, unknown>[]) : [])
@@ -200,34 +204,34 @@ class ApiService {
 
   // Obtiene estadísticas de agendas
   async getAgendaStats(): Promise<ApiResponse<unknown>> {
-    return this.request<unknown>('/api/agnd-agenda/estadisticas')
+    return this.request<unknown>('/api/agnd-agenda/estadisticas', {}, true)
   }
 
   // ===== ENDPOINTS DE CATÁLOGOS =====
   
   // Obtiene el catálogo de consultorios
   async getConsultorios(): Promise<ApiResponse<unknown[]>> {
-    return this.request<unknown[]>('/api/catalogos/consultorios')
+    return this.request<unknown[]>('/api/catalogos/consultorios', {}, true)
   }
 
   // Obtiene el catálogo de días de la semana
   async getDias(): Promise<ApiResponse<unknown[]>> {
-    return this.request<unknown[]>('/api/catalogos/dias')
+    return this.request<unknown[]>('/api/catalogos/dias', {}, true)
   }
 
   // Obtiene el catálogo de edificios
   async getEdificios(): Promise<ApiResponse<Edificio[]>> {
-    return this.request<Edificio[]>('/api/catalogos/edificios')
+    return this.request<Edificio[]>('/api/catalogos/edificios', {}, true)
   }
 
   // Obtiene los pisos de un edificio específico
   async getPisosEdificio(codigoEdificio: string): Promise<ApiResponse<string[]>> {
-    return this.request<string[]>(`/api/catalogos/edificios/${encodeURIComponent(codigoEdificio)}/pisos`)
+    return this.request<string[]>(`/api/catalogos/edificios/${encodeURIComponent(codigoEdificio)}/pisos`, {}, true)
   }
 
   // ===== ENDPOINTS DE AGENDA PERSONALIZADA =====
   async getAgendasCustom(): Promise<ApiResponse<Agenda[]>> {
-    return this.request<Agenda[]>('/api/agnd-agenda')
+    return this.request<Agenda[]>('/api/agnd-agenda', {}, true)
   }
 
   // ===== ORQUESTACIÓN: AGENDAS DETALLADAS POR MÉDICO =====
@@ -469,7 +473,7 @@ class ApiService {
       const v = String(t ?? '').toUpperCase()
       if (v === 'C') return 'Consulta'
       if (v === 'P') return 'Procedimiento'
-      return v || ''
+      return v
     }
 
     // IMPORTANTE: Solo usar las agendas específicas del médico - ELIMINAR FALLBACK COMPLETAMENTE
@@ -685,7 +689,7 @@ class ApiService {
         horaFinHHmm: horaFin,
         consultorioDescripcion: consultorio?.descripcion_consultorio
           ? String(consultorio.descripcion_consultorio)
-          : (consultorio?.__raw ? String((consultorio.__raw as any)?.DES_CONSULTORIO || '') : ''),
+          : (consultorio?.__raw ? String((consultorio.__raw as any)?.DES_CONSULTORIO) : ''),
         consultorioCodigo: consultorio?.codigo_consultorio,
         edificioDescripcion,
         tipoTexto: decodeTipo((a as any).tipo),
@@ -705,15 +709,15 @@ class ApiService {
 
   // ===== ENDPOINTS DE SERVICIOS EXTERNOS =====
   async getExternalDoctors(): Promise<ApiResponse<Doctor[]>> {
-    return this.request<Doctor[]>('/api/external/medicos')
+    return this.request<Doctor[]>('/api/external/medicos', {}, true)
   }
 
   async getAuthStatus(): Promise<ApiResponse<unknown>> {
-    return this.request<unknown>('/api/external/auth/status')
+    return this.request<unknown>('/api/external/auth/status', {}, true)
   }
 
   async getExternalConfig(): Promise<ApiResponse<unknown>> {
-    return this.request<unknown>('/api/external/config')
+    return this.request<unknown>('/api/external/config', {}, true)
   }
 
   // ===== NUEVOS MÉTODOS PARA COMPATIBILIDAD =====

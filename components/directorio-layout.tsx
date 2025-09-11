@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { HomeIcon, ArrowLeftIcon, ChevronUpIcon } from 'lucide-react'
 import { CurrentTime } from "@/components/current-time"
 import { Footer } from "@/components/footer"
-import type { ReactNode } from "react"
 import Image from "next/image"
 import { config } from "@/lib/config"
 import type { DirectorioLayoutProps } from "@/lib/types"

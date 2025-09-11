@@ -217,6 +217,7 @@ export default function DoctorSearchPage() {
                           specialtyName={specLabel}
                           basePath={`/specialties/${specSlug}`}
                           queryParams={{ source: 'doctor' }}
+                          onCardClick={() => setIsKeyboardOpen(false)}
                         />
                       </div>
                     )

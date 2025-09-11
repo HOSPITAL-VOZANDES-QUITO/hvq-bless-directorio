@@ -9,8 +9,8 @@ let refreshToken = ''
 // Función para obtener credenciales desde variables de entorno
 // Usa valores por defecto si no están configuradas las variables
 const getCredentials = (): { username: string; password: string } => {
-  const username = process.env.EXTERNAL_AUTH_USERNAME 
-  const password = process.env.EXTERNAL_AUTH_PASSWORD
+  const username = process.env.NEXT_PUBLIC_AUTH_USERNAME 
+  const password = process.env.NEXT_PUBLIC_AUTH_PASSWORD
 
   if (!username || !password) {
     throw new Error('Credenciales de autenticación no configuradas')
@@ -41,8 +41,12 @@ const login = async (): Promise<AuthTokens> => {
     const { username, password } = getCredentials()
     
     // Realizar petición de login al endpoint de autenticación
+    const authUrl = config.api.authUrl
+    if (!authUrl) {
+      throw new Error('URL de autenticación no configurada')
+    }
     const response = await axios.post(
-      `${config.api.authUrl}/Auth/login`,
+      authUrl,
       new URLSearchParams({ username, password }),
       {
         headers: {
@@ -61,8 +65,6 @@ const login = async (): Promise<AuthTokens> => {
     return { accessToken: access_token, refreshToken: refresh_token }
   } catch (error) {
     const authError = handleAuthError(error)
-    // En producción, no deberíamos loggear errores de autenticación
-    // console.error('Error de login:', authError.message)
     throw new Error(authError.message)
   }
 }
@@ -95,12 +97,9 @@ const refreshAuthToken = async (): Promise<AuthTokens> => {
     return { accessToken: access_token, refreshToken: refresh_token }
   } catch (error) {
     const authError = handleAuthError(error)
-    // En producción, no deberíamos loggear errores de autenticación
-    // console.error('Error de refresh:', authError.message)
     throw new Error(authError.message)
   }
 }
-
 // Función principal para obtener el token de acceso
 // Si no hay token, realiza login automáticamente
 export const getAccessToken = async (): Promise<string> => {

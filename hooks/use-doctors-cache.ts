@@ -67,7 +67,6 @@ export function useDoctorsCache() {
             return
           }
         } catch (parseError) {
-          console.warn('Error al parsear caché de médicos:', parseError)
           // Si hay error al parsear, continuar con la carga desde API
         }
       }
@@ -94,7 +93,7 @@ export function useDoctorsCache() {
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
         } catch (storageError) {
-          console.warn('Error al guardar en caché:', storageError)
+          // Error al guardar en caché, continuar sin caché
         }
       }
     } catch (e) {

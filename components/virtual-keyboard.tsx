@@ -31,9 +31,9 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
         const isSearchPage = window.location.pathname.includes('/doctors/search')
         
         // Ajustar la posición según el contexto para no tapar elementos importantes
-        let positionMultiplier = 0.45 // Posición por defecto más arriba
+        let positionMultiplier = 0.45 
         if (isSearchPage) {
-          positionMultiplier = 0.35 // Aún más arriba para búsqueda
+          positionMultiplier = 0.50 
         }
         
         const tentativeTop = (window.innerHeight - rect.height) * positionMultiplier
@@ -153,7 +153,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
   }
 
   return (
-    <div className="virtual-keyboard-overlay" onClick={handleClose}>
+    <div className="virtual-keyboard-overlay">
       <div 
         ref={keyboardRef}
         className={`virtual-keyboard-content${isDragging ? ' dragging' : ''}`}
@@ -236,6 +236,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
           z-index: 50;
           opacity: 0;
           animation: fadeIn 0.3s forwards;
+          pointer-events: none;
         }
         
         @keyframes fadeIn {
@@ -250,6 +251,7 @@ export function VirtualKeyboard({ value, onChange, onClose, placeholder, onEnter
           max-width: 800px;
           padding: 16px;
           box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+          pointer-events: auto;
         }
         .virtual-keyboard-content.dragging {
           box-shadow: 0 16px 28px rgba(0,0,0,0.28);
